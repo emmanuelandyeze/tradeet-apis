@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
+import indexRoutes from './routes/index.js';
 
 dotenv.config();
 
@@ -15,9 +16,7 @@ app.use(express.json());
 app.use(cors());
 
 // Routes
-app.get('/', (req, res) => {
-	res.send('Welcome to Tradeet Mobile API');
-});
+app.use('/', indexRoutes);
 app.use('/api/auth', authRoutes);
 
 const connectDB = async () => {
