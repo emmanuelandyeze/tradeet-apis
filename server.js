@@ -21,10 +21,13 @@ app.use('/api/auth', authRoutes);
 
 const connectDB = async () => {
 	try {
-		await mongoose.connect(process.env.MONGO_URI, {
-			useNewUrlParser: true,
-			useUnifiedTopology: true,
-		});
+		await mongoose.connect(
+			'mongodb+srv://3riveafrica:chexyemma8@cluster0.d0ueajk.mongodb.net/tradeet?retryWrites=true&w=majority&appName=Cluster0',
+			{
+				useNewUrlParser: true,
+				useUnifiedTopology: true,
+			},
+		);
 		console.log('MongoDB connected...');
 	} catch (err) {
 		console.error(err.message);
