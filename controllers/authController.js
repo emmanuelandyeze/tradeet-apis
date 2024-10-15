@@ -199,7 +199,7 @@ export const completeProfile = async (req, res) => {
 		const token = jwt.sign(
 			{ id: business._id },
 			process.env.JWT_SECRET,
-			{ expiresIn: '1h' },
+			{ expiresIn: '30d' },
 		);
 
 		res.status(200).json({
@@ -239,7 +239,7 @@ export const completeCampusProfile = async (req, res) => {
 		const token = jwt.sign(
 			{ id: business._id },
 			process.env.JWT_SECRET,
-			{ expiresIn: '1h' },
+			{ expiresIn: '30d' },
 		);
 
 		res.status(200).json({
@@ -281,7 +281,7 @@ export const login = async (req, res) => {
 		const token = jwt.sign(
 			{ id: business._id },
 			process.env.JWT_SECRET,
-			{ expiresIn: '1h' },
+			{ expiresIn: '30d' },
 		);
 
 		res.status(200).json({ token });
