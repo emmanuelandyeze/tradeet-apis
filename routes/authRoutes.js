@@ -5,6 +5,7 @@ import {
 	completeProfile,
 	login,
 	getBusinessInfo,
+	completeCampusProfile,
 } from '../controllers/authController.js';
 import { authenticateBusiness } from '../middlewares/authMiddleware.js';
 
@@ -18,6 +19,10 @@ router.post('/verify-code', verifyCode);
 
 // Complete profile setup
 router.post('/complete-profile', completeProfile);
+router.post(
+	'/complete-campus-profile',
+	completeCampusProfile,
+);
 
 // Login
 router.post('/login', login);

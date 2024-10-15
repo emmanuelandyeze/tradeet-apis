@@ -7,6 +7,7 @@ const businessSchema = new mongoose.Schema({
 	name: { type: String },
 	logoUrl: { type: String },
 	address: { type: String },
+	serviceType: { type: String },
 	campus: { type: String }, // applicable for Tradeet Campus users
 	password: { type: String },
 	isVendor: { type: Boolean, default: false }, // differentiate between Business and Campus

@@ -2,6 +2,79 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import BusinessModel from '../models/BusinessModel.js';
+import axios from 'axios';
+
+const sendCode = async (whatsapp, verificationCode) => {
+	try {
+		const sendMessage = async () => {
+			const accessToken = process.env.FB_SECRET;
+			const url =
+				'https://graph.facebook.com/v20.0/382339108296299/messages';
+
+			try {
+				const response = await axios.post(
+					url,
+					{
+						messaging_product: 'whatsapp',
+						to: whatsapp, // Ensure the correct phone number
+						type: 'template',
+						template: {
+							name: 'code',
+							language: {
+								code: 'en',
+							},
+							components: [
+								{
+									type: 'body',
+									parameters: [
+										{
+											type: 'text',
+											text: verificationCode,
+										},
+									],
+								},
+							],
+						},
+					},
+					{
+						headers: {
+							Authorization: `Bearer ${accessToken}`,
+							'Content-Type': 'application/json',
+						},
+					},
+				);
+
+				console.log('Response:', response.data);
+				// Further logging
+				console.log(
+					'Message ID:',
+					response.data.messages[0].id,
+				);
+				console.log(
+					'Recipient WA ID:',
+					response.data.contacts[0].wa_id,
+				);
+			} catch (error) {
+				console.error(
+					'Error sending message:',
+					error.response
+						? error.response.data
+						: error.message,
+				);
+			}
+		};
+
+		sendMessage();
+
+		return verificationCode;
+	} catch (error) {
+		console.error(
+			'Error sending verification code:',
+			error,
+		);
+		throw new Error('Failed to send verification code.');
+	}
+};
 
 // Step 1: Send verification code via WhatsApp
 export const sendVerificationCode = async (req, res) => {
@@ -11,30 +84,31 @@ export const sendVerificationCode = async (req, res) => {
 		// Check if the phone number already exists
 		let business = await BusinessModel.findOne({ phone });
 		if (business) {
-			return res
-				.status(400)
-				.json({
-					message: 'Phone number already registered',
-				});
+			return res.status(400).json({
+				message: 'Phone number already registered',
+			});
 		}
 
 		// Generate verification code (e.g., 4 digits)
-		const verificationCode = Math.floor(
-			1000 + Math.random() * 9000,
-		);
+		// const verificationCode = Math.floor(
+		// 	1000 + Math.random() * 9000,
+		// );
+
+		const verificationCode = 1234;
 
 		// Create business with just phone and verificationCode
-		business = new BusinessModel({ phone, verificationCode });
+		business = new BusinessModel({
+			phone,
+			verificationCode,
+		});
 		await business.save();
 
 		// Send the verification code using WhatsApp Business API
-		// Call your WhatsApp API here with phone and verificationCode
+		await sendCode(phone, verificationCode);
 
-		res
-			.status(200)
-			.json({
-				message: 'Verification code sent via WhatsApp',
-			});
+		res.status(200).json({
+			message: 'Verification code sent via WhatsApp',
+		});
 	} catch (error) {
 		res
 			.status(500)
@@ -79,21 +153,23 @@ export const completeProfile = async (req, res) => {
 		password,
 		campus,
 		isVendor,
-    } = req.body;
-    
-    // console.log(
-	// 		phone,
-	// 		name,
-	// 		logoUrl,
-	// 		address,
-	// 		password,
-	// 		campus,
-	// 		isVendor,
-	// 	);
+		serviceType,
+	} = req.body;
+
+	console.log(
+		phone,
+		name,
+		logoUrl,
+		address,
+		password,
+		campus,
+		isVendor,
+		serviceType,
+	);
 
 	try {
-        const business = await BusinessModel.findOne({ phone });
-        console.log(business)
+		const business = await BusinessModel.findOne({ phone });
+		console.log(business);
 		if (!business || !business.isVerified) {
 			return res
 				.status(400)
@@ -116,6 +192,7 @@ export const completeProfile = async (req, res) => {
 		if (isVendor) {
 			business.campus = campus;
 		}
+		business.serviceType = serviceType;
 		await business.save();
 
 		// Generate a JWT token
@@ -125,9 +202,51 @@ export const completeProfile = async (req, res) => {
 			{ expiresIn: '1h' },
 		);
 
+		res.status(200).json({
+			token,
+			message: 'Profile setup completed',
+			business,
+		});
+	} catch (error) {
 		res
-			.status(200)
-			.json({ token, message: 'Profile setup completed', business });
+			.status(500)
+			.json({ message: 'Server error', error });
+	}
+};
+
+export const completeCampusProfile = async (req, res) => {
+	const {
+		phone,
+
+		campus,
+	} = req.body;
+
+	try {
+		const business = await BusinessModel.findOne({ phone });
+		console.log(business);
+		if (!business || !business.isVerified) {
+			return res
+				.status(400)
+				.json({ message: 'Phone number not verified' });
+		}
+
+		// Update business details
+		business.campus = campus;
+
+		await business.save();
+
+		// Generate a JWT token
+		const token = jwt.sign(
+			{ id: business._id },
+			process.env.JWT_SECRET,
+			{ expiresIn: '1h' },
+		);
+
+		res.status(200).json({
+			token,
+			message: 'Profile setup completed',
+			business,
+		});
 	} catch (error) {
 		res
 			.status(500)
