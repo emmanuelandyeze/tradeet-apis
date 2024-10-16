@@ -156,17 +156,6 @@ export const completeProfile = async (req, res) => {
 		serviceType,
 	} = req.body;
 
-	console.log(
-		phone,
-		name,
-		logoUrl,
-		address,
-		password,
-		campus,
-		isVendor,
-		serviceType,
-	);
-
 	try {
 		const business = await BusinessModel.findOne({ phone });
 		console.log(business);
