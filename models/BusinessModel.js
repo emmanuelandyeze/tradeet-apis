@@ -12,6 +12,7 @@ const businessSchema = new mongoose.Schema({
 	password: { type: String },
 	isVendor: { type: Boolean, default: false }, // differentiate between Business and Campus
 	createdAt: { type: Date, default: Date.now },
+	storeLink: { type: String },
 });
 
 export default mongoose.model('Business', businessSchema);

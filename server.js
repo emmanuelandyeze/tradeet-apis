@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import indexRoutes from './routes/index.js';
+import productRoutes from './routes/productRoutes.js';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use(cors());
 // Routes
 app.use('/', indexRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
 
 const connectDB = async () => {
 	try {
