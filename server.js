@@ -7,6 +7,7 @@ import indexRoutes from './routes/index.js';
 import productRoutes from './routes/productRoutes.js';
 import studentAuthRoutes from './routes/studentAuthRoutes.js';
 import businessRoutes from './routes/businessRoute.js';
+import orderRoutes from './routes/orderRoutes.js';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/student-auth', studentAuthRoutes);
 app.use('/api/businesses', businessRoutes);
+app.use('/api/orders', orderRoutes);
 
 const connectDB = async () => {
 	try {
