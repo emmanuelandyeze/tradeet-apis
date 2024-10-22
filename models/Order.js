@@ -50,6 +50,8 @@ const orderSchema = new mongoose.Schema(
 			ref: 'Student',
 			required: true,
 		},
+		totalAmount: { type: Number }, // Amount to be paid
+		itemsAmount: { type: Number }, // Amount for store
 	},
 	{
 		timestamps: true, // Automatically adds createdAt and updatedAt fields

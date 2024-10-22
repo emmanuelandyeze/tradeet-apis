@@ -10,6 +10,8 @@ import {
 	getIncomingOrdersForRunner,
 	getAcceptedOrdersForRunner,
 	getOrdersByUserId,
+	acceptOrderByVendor,
+	cancelOrderByVendor,
 } from '../controllers/orderController.js';
 
 const router = Router();
@@ -30,5 +32,9 @@ router.get(
 	getAcceptedOrdersForRunner,
 ); // Get accepted orders for a runner
 router.get('/user/:userId', getOrdersByUserId);
+
+// Store actions on orders
+router.put('/v/:orderId/accept', acceptOrderByVendor); // Accept an order
+router.put('/v/:orderId/cancel', cancelOrderByVendor); // Cancel an order
 
 export default router;

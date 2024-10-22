@@ -19,6 +19,6 @@ router.post(
 	completeCampusProfile,
 );
 router.post('/login', login);
-router.get('/me', protect, getStudentInfo);
+router.get('/me', protect, getStudentInfo); 
 
 export default router;

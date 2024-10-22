@@ -183,16 +183,18 @@ export const completeCampusProfile = async (req, res) => {
 // Step 4: Login
 export const login = async (req, res) => {
 	const { phone, password } = req.body;
+	console.log(phone, password);
 
 	try {
 		const student = await StudentModel.findOne({ phone });
+		console.log(student);
 		if (!student) {
 			return res
 				.status(400)
 				.json({ message: 'Student not found' });
 		}
 
-		const isMatch = await bcrypt.compare(
+		const isMatch = bcrypt.compare(
 			password,
 			student.password,
 		);
@@ -207,6 +209,8 @@ export const login = async (req, res) => {
 			process.env.JWT_SECRET,
 			{ expiresIn: '30d' },
 		);
+
+		console.log(token);
 
 		res.status(200).json({ token });
 	} catch (error) {

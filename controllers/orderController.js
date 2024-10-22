@@ -1,7 +1,8 @@
 import Order from '../models/Order.js';
+import { io } from '../server.js';
 
 // Create a new order
-export const createOrder = async (req, res) => {
+export const createOrder = async (req, res, next) => {
 	try {
 		const {
 			storeId,
@@ -9,6 +10,8 @@ export const createOrder = async (req, res) => {
 			items,
 			payment,
 			userId,
+			totalAmount,
+			itemsAmount
 		} = req.body;
 
 		const newOrder = new Order({
@@ -17,9 +20,18 @@ export const createOrder = async (req, res) => {
 			items,
 			payment,
 			userId,
+			totalAmount,
+			itemsAmount,
+			status: 'pending', // Default order status
 		});
 
 		await newOrder.save();
+
+		// Emit an event to the store that a new order has been placed
+		io.emit('newOrder', {
+			message: 'New order placed',
+			order: newOrder,
+		});
 
 		res.status(201).json({
 			message: 'Order placed successfully',
@@ -34,10 +46,10 @@ export const createOrder = async (req, res) => {
 };
 
 // Accept an order by the runner
-export const acceptOrder = async (req, res) => {
+export const acceptOrder = async (req, res, next) => {
 	try {
 		const { orderId } = req.params;
-		const { runnerId } = req.body; // Expecting runnerId in request body
+		const { runnerId } = req.body;
 
 		const order = await Order.findByIdAndUpdate(
 			orderId,
@@ -45,9 +57,9 @@ export const acceptOrder = async (req, res) => {
 				runnerInfo: {
 					runnerId,
 					accepted: true,
-					acceptedAt: new Date(), // Set the acceptance timestamp
+					acceptedAt: new Date(),
 				},
-				status: 'accepted', // Update order status
+				status: 'accepted',
 			},
 			{ new: true },
 		);
@@ -57,6 +69,16 @@ export const acceptOrder = async (req, res) => {
 				.status(404)
 				.json({ message: 'Order not found' });
 		}
+
+		// Notify store and customer that the order has been accepted
+		io.to(order.storeId).emit('orderAccepted', {
+			message: 'Order accepted by runner',
+			order,
+		});
+		io.to(order.customerInfo.userId).emit('orderAccepted', {
+			message: 'Your order has been accepted by a runner',
+			order,
+		});
 
 		res.json({
 			message: 'Order accepted successfully',
@@ -107,8 +129,8 @@ export const getOrderById = async (req, res) => {
 	}
 };
 
-// Update order status (used for completing or cancelling orders)
-export const updateOrderStatus = async (req, res) => {
+// Update order status (used for completing or canceling orders)
+export const updateOrderStatus = async (req, res, next) => {
 	try {
 		const { status } = req.body;
 		const order = await Order.findByIdAndUpdate(
@@ -123,6 +145,19 @@ export const updateOrderStatus = async (req, res) => {
 				.json({ message: 'Order not found' });
 		}
 
+		// Notify both the customer and the store of the status update
+		io.to(order.customerInfo.userId).emit(
+			'orderStatusUpdated',
+			{
+				message: `Order status updated to ${status}`,
+				order,
+			},
+		);
+		io.to(order.storeId).emit('orderStatusUpdated', {
+			message: `Order status updated to ${status}`,
+			order,
+		});
+
 		res.json({
 			message: `Order status updated to ${status}`,
 			order,
@@ -136,7 +171,7 @@ export const updateOrderStatus = async (req, res) => {
 };
 
 // Cancel an order
-export const cancelOrder = async (req, res) => {
+export const cancelOrder = async (req, res, next) => {
 	try {
 		const order = await Order.findByIdAndUpdate(
 			req.params.orderId,
@@ -149,6 +184,19 @@ export const cancelOrder = async (req, res) => {
 				.status(404)
 				.json({ message: 'Order not found' });
 		}
+
+		// Notify both the customer and store about the cancellation
+		io.to(order.customerInfo.userId).emit(
+			'orderCancelled',
+			{
+				message: 'Your order has been cancelled',
+				order,
+			},
+		);
+		io.to(order.storeId).emit('orderCancelled', {
+			message: 'Order has been cancelled',
+			order,
+		});
 
 		res.json({
 			message: 'Order cancelled successfully',
@@ -166,7 +214,6 @@ export const cancelOrder = async (req, res) => {
 export const getOrdersForStore = async (req, res) => {
 	try {
 		const { storeId } = req.params;
-
 		const orders = await Order.find({ storeId })
 			.populate('storeId')
 			.populate('runnerInfo.runnerId');
@@ -187,7 +234,6 @@ export const getIncomingOrdersForRunner = async (
 ) => {
 	try {
 		const { runnerId } = req.params;
-
 		const orders = await Order.find({
 			'runnerInfo.runnerId': { $ne: runnerId },
 			status: 'pending',
@@ -212,7 +258,6 @@ export const getAcceptedOrdersForRunner = async (
 ) => {
 	try {
 		const { runnerId } = req.params;
-
 		const orders = await Order.find({
 			'runnerInfo.runnerId': runnerId,
 			'runnerInfo.accepted': true,
@@ -232,27 +277,114 @@ export const getAcceptedOrdersForRunner = async (
 
 // Get orders by user ID
 export const getOrdersByUserId = async (req, res) => {
-	const { userId } = req.params; // Extract userId from URL params
-	console.log(userId);
-
 	try {
+		const { userId } = req.params;
 		const orders = await Order.find({ userId }).populate(
 			'storeId',
-		); // Populate the store information
+		);
 
-		console.log(orders);
-		console.log('here');
 		if (!orders.length) {
 			return res.status(404).json({
 				message: 'No orders found for this user.',
 			});
 		}
 
-		res.status(200).json(orders);
+		res.json(orders);
 	} catch (error) {
 		res.status(500).json({
 			message: 'Error retrieving orders',
 			error: error.message,
 		});
+	}
+};
+
+// Accept an order by vendor
+export const acceptOrderByVendor = async (req, res) => {
+	console.log('acceptOrderByVendor called');
+	const { orderId } = req.params;
+	const { storeId } = req.body; // Assuming storeId is in the authenticated user object
+
+	try {
+		const order = await Order.findById(orderId);
+
+		console.log('I am here!');
+		if (!order) {
+			return res
+				.status(404)
+				.json({ message: 'Order not found' });
+		}
+
+		if (order.storeId.toString() !== storeId.toString()) {
+			return res.status(403).json({
+				message:
+					'You are not authorized to accept this order',
+			});
+		}
+
+		// if (order.status !== 'pending') {
+		// 	return res.status(400).json({
+		// 		message:
+		// 			'Order cannot be accepted in the current status',
+		// 	});
+		// }
+
+		order.status = 'accepted';
+		await order.save();
+
+		io.emit('orderUpdate', order); // Emit the updated order
+		console.log('Order update emitted successfully');
+
+		res.status(200).json({
+			message: 'Order accepted successfully',
+			order,
+		});
+	} catch (error) {
+		res
+			.status(500)
+			.json({ message: 'Server error', error });
+	}
+};
+
+// Cancel an order by vendor
+export const cancelOrderByVendor = async (req, res) => {
+	const { orderId } = req.params;
+	const { storeId } = req.body; // Assuming storeId is in the authenticated user object
+
+	try {
+		const order = await Order.findById(orderId);
+
+		if (!order) {
+			return res
+				.status(404)
+				.json({ message: 'Order not found' });
+		}
+
+		if (order.storeId.toString() !== storeId.toString()) {
+			return res.status(403).json({
+				message:
+					'You are not authorized to cancel this order',
+			});
+		}
+
+		if (order.status !== 'pending') {
+			return res.status(400).json({
+				message:
+					'Order cannot be canceled in the current status',
+			});
+		}
+
+		order.status = 'canceled';
+		await order.save();
+
+		io.emit('orderUpdate', order); // Emit the order cancellation via socket
+
+		res.status(200).json({
+			message: 'Order canceled successfully',
+			order,
+		});
+	} catch (error) {
+		res
+			.status(500)
+			.json({ message: 'Server error', error });
 	}
 };
