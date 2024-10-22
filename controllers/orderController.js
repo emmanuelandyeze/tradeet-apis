@@ -1,7 +1,7 @@
 import Order from '../models/Order.js';
+import StudentModel from '../models/StudentModel.js';
 import { io } from '../server.js';
 
-// Create a new order
 export const createOrder = async (req, res, next) => {
 	try {
 		const {
@@ -11,9 +11,44 @@ export const createOrder = async (req, res, next) => {
 			payment,
 			userId,
 			totalAmount,
-			itemsAmount
+			itemsAmount,
 		} = req.body;
 
+		// Fetch the user's wallet information from the database
+		const user = await StudentModel.findById(userId);
+		if (!user) {
+			return res
+				.status(404)
+				.json({ message: 'User not found' });
+		}
+
+		let userWalletBalance = user.wallet || 0; // Assuming there's a `walletBalance` field in the User model
+
+		// Fetch the number of existing orders for the store
+		const orderCount = await Order.countDocuments({
+			storeId: storeId,
+		});
+
+		// Generate a 5-digit invoice number, starting from 1
+		const orderNumber = (orderCount + 1)
+			.toString()
+			.padStart(5, '0');
+
+		// Handle wallet payment
+		if (payment.type === 'wallet') {
+			// Check if the user has enough wallet balance to cover the order amount
+			if (userWalletBalance < totalAmount) {
+				return res.status(400).json({
+					message: 'Insufficient wallet balance',
+				});
+			}
+
+			// Deduct the total amount from the user's wallet
+			user.wallet -= totalAmount;
+			await user.save(); // Save the updated wallet balance in the database
+		}
+
+		// Create the new order
 		const newOrder = new Order({
 			storeId,
 			customerInfo,
@@ -22,6 +57,7 @@ export const createOrder = async (req, res, next) => {
 			userId,
 			totalAmount,
 			itemsAmount,
+			orderNumber,
 			status: 'pending', // Default order status
 		});
 
@@ -44,6 +80,7 @@ export const createOrder = async (req, res, next) => {
 		});
 	}
 };
+
 
 // Accept an order by the runner
 export const acceptOrder = async (req, res, next) => {

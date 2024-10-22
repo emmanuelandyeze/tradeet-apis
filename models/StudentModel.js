@@ -8,6 +8,7 @@ const StudentSchema = new mongoose.Schema({
 	isVerified: { type: Boolean, default: false },
 	verificationCode: { type: String },
 	createdAt: { type: Date, default: Date.now },
+	wallet: { type: Number },
 });
 
 export default mongoose.model('Student', StudentSchema);

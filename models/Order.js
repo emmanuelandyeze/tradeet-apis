@@ -10,7 +10,7 @@ const orderSchema = new mongoose.Schema(
 		customerInfo: {
 			name: { type: String, required: true },
 			contact: { type: String, required: true },
-			address: { type: String, required: true },
+			address: { type: String },
 		},
 		runnerInfo: {
 			runnerId: {
@@ -52,6 +52,7 @@ const orderSchema = new mongoose.Schema(
 		},
 		totalAmount: { type: Number }, // Amount to be paid
 		itemsAmount: { type: Number }, // Amount for store
+		orderNumber: { type: String }, // Order number
 	},
 	{
 		timestamps: true, // Automatically adds createdAt and updatedAt fields
