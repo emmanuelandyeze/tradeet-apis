@@ -11,4 +11,4 @@ const StudentSchema = new mongoose.Schema({
 	wallet: { type: Number },
 });
 
-export default mongoose.model('Student', StudentSchema);
+export default mongoose.model('Student', StudentSchema); 

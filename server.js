@@ -9,6 +9,7 @@ import productRoutes from './routes/productRoutes.js';
 import studentAuthRoutes from './routes/studentAuthRoutes.js';
 import businessRoutes from './routes/businessRoute.js';
 import orderRoutes from './routes/orderRoutes.js';
+import runnerAuthRoutes from './routes/runnerAuthRoutes.js';
 import { Server } from 'socket.io';
 
 dotenv.config();
@@ -27,6 +28,7 @@ app.use('/', indexRoutes);
 app.use('/auth', authRoutes);
 app.use('/products', productRoutes);
 app.use('/student-auth', studentAuthRoutes);
+app.use('/runner-auth', runnerAuthRoutes);
 app.use('/businesses', businessRoutes);
 app.use('/orders', orderRoutes);
 
