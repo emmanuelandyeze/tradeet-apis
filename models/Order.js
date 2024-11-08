@@ -27,6 +27,7 @@ const orderSchema = new mongoose.Schema(
 			enum: [
 				'pending',
 				'accepted',
+				'in progress',
 				'completed',
 				'cancelled',
 			],
@@ -53,6 +54,7 @@ const orderSchema = new mongoose.Schema(
 		totalAmount: { type: Number }, // Amount to be paid
 		itemsAmount: { type: Number }, // Amount for store
 		orderNumber: { type: String }, // Order number
+		deliveryCode: { type: String }, // Delivery code
 	},
 	{
 		timestamps: true, // Automatically adds createdAt and updatedAt fields

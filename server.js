@@ -10,6 +10,8 @@ import studentAuthRoutes from './routes/studentAuthRoutes.js';
 import businessRoutes from './routes/businessRoute.js';
 import orderRoutes from './routes/orderRoutes.js';
 import runnerAuthRoutes from './routes/runnerAuthRoutes.js';
+import runnerRoutes from './routes/runnerRoutes.js';
+import deliveryRequestRoutes from './routes/deliveryRequestRoutes.js';
 import { Server } from 'socket.io';
 
 dotenv.config();
@@ -31,6 +33,8 @@ app.use('/student-auth', studentAuthRoutes);
 app.use('/runner-auth', runnerAuthRoutes);
 app.use('/businesses', businessRoutes);
 app.use('/orders', orderRoutes);
+app.use('/runner', runnerRoutes);
+app.use('/delivery', deliveryRequestRoutes);
 
 const io = new Server(server, {
 	cors: {
@@ -53,13 +57,34 @@ const connectDB = async () => {
 
 connectDB();
 
-// WebSocket connection
-io.on('connection', (socket) => {
-	console.log('A user connected', socket.id);
+// Dictionary to store runner sockets by runnerId
+const runnerSockets = {};
 
+// Setup the connection handler
+io.on('connection', (socket) => {
+	const { runnerId } = socket.handshake.query;
+
+	if (runnerId) {
+		runnerSockets[runnerId] = socket.id;
+		console.log(
+			`Runner ${runnerId} connected with socket ID ${socket.id}`,
+		);
+	}
+
+	// Cleanup on disconnect
 	socket.on('disconnect', () => {
-		console.log('A user disconnected', socket.id);
+		if (runnerId) {
+			delete runnerSockets[runnerId];
+			console.log(`Runner ${runnerId} disconnected`);
+		}
 	});
+});
+
+// Export server and helper functions
+export const getRunnerSocketId = (runnerId) =>
+	runnerSockets[runnerId];
+export const getAllRunnerSockets = () => ({
+	...runnerSockets,
 });
 
 export { io }; // Export io for use in other files

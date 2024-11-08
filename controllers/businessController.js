@@ -77,3 +77,32 @@ export const findBusinessAndProductsById = async (
 		});
 	}
 };
+
+// Controller to get business information by business ID
+export const findBusinessById = async (req, res) => {
+  const { businessId } = req.params;
+
+  try {
+    // Find the business by the provided businessId, excluding password
+    const business = await Business.findById(businessId).select('-password');
+
+    // If the business is not found, return a 404 response
+    if (!business) {
+      return res.status(404).json({
+        message: 'Business not found.',
+      });
+    }
+
+    // Return the business details
+    res.status(200).json({
+      success: true,
+      business: business,
+    });
+  } catch (error) {
+    // Handle errors and return a 500 response
+    console.error(error);
+    res.status(500).json({
+      message: 'Server error. Please try again later.',
+    });
+  }
+};

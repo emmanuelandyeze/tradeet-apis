@@ -1,4 +1,5 @@
 import Order from '../models/Order.js';
+import Runner from '../models/Runner.js';
 import StudentModel from '../models/StudentModel.js';
 import { io } from '../server.js';
 
@@ -12,6 +13,8 @@ export const createOrder = async (req, res, next) => {
 			userId,
 			totalAmount,
 			itemsAmount,
+			runnerInfo,
+			status,
 		} = req.body;
 
 		// Fetch the user's wallet information from the database
@@ -48,6 +51,11 @@ export const createOrder = async (req, res, next) => {
 			await user.save(); // Save the updated wallet balance in the database
 		}
 
+		// Generate a random 4-digit delivery code
+		const deliveryCode = Math.floor(
+			1000 + Math.random() * 9000,
+		);
+
 		// Create the new order
 		const newOrder = new Order({
 			storeId,
@@ -58,7 +66,9 @@ export const createOrder = async (req, res, next) => {
 			totalAmount,
 			itemsAmount,
 			orderNumber,
-			status: 'pending', // Default order status
+			status, // Default order status
+			runnerInfo, // Optional field for tracking runner information
+			deliveryCode, // Add the delivery code to the order
 		});
 
 		await newOrder.save();
@@ -80,7 +90,6 @@ export const createOrder = async (req, res, next) => {
 		});
 	}
 };
-
 
 // Accept an order by the runner
 export const acceptOrder = async (req, res, next) => {
@@ -108,11 +117,11 @@ export const acceptOrder = async (req, res, next) => {
 		}
 
 		// Notify store and customer that the order has been accepted
-		io.to(order.storeId).emit('orderAccepted', {
+		io.emit('orderAccepted', {
 			message: 'Order accepted by runner',
 			order,
 		});
-		io.to(order.customerInfo.userId).emit('orderAccepted', {
+		io.emit('orderAccepted', {
 			message: 'Your order has been accepted by a runner',
 			order,
 		});
@@ -183,14 +192,11 @@ export const updateOrderStatus = async (req, res, next) => {
 		}
 
 		// Notify both the customer and the store of the status update
-		io.to(order.customerInfo.userId).emit(
-			'orderStatusUpdated',
-			{
-				message: `Order status updated to ${status}`,
-				order,
-			},
-		);
-		io.to(order.storeId).emit('orderStatusUpdated', {
+		io.emit('orderStatusUpdated', {
+			message: `Order status updated to ${status}`,
+			order,
+		});
+		io.emit('orderStatusUpdated', {
 			message: `Order status updated to ${status}`,
 			order,
 		});
@@ -423,5 +429,104 @@ export const cancelOrderByVendor = async (req, res) => {
 		res
 			.status(500)
 			.json({ message: 'Server error', error });
+	}
+};
+
+// Complete an order by vendor
+export const completeOrderByVendor = async (req, res) => {
+	console.log('completeOrderByVendor called');
+	const { orderId } = req.params;
+	const { storeId } = req.body; // Assuming storeId is in the authenticated user object
+
+	try {
+		const order = await Order.findById(orderId);
+
+		if (!order) {
+			return res
+				.status(404)
+				.json({ message: 'Order not found' });
+		}
+
+		if (order.storeId.toString() !== storeId.toString()) {
+			return res.status(403).json({
+				message:
+					'You are not authorized to confirm this order',
+			});
+		}
+
+		// if (order.status !== 'pending') {
+		// 	return res.status(400).json({
+		// 		message:
+		// 			'Order cannot be accepted in the current status',
+		// 	});
+		// }
+
+		order.status = 'completed';
+		await order.save();
+
+		io.emit('orderUpdate', order); // Emit the updated order
+		console.log('Order update emitted successfully');
+
+		res.status(200).json({
+			message: 'Order accepted successfully',
+			order,
+		});
+	} catch (error) {
+		res
+			.status(500)
+			.json({ message: 'Server error', error });
+	}
+};
+
+// Add a runner to an order
+export const addRunner = async (req, res) => {
+	const { orderId } = req.params;
+	const { runnerId } = req.body;
+
+	try {
+		const order = await Order.findById(orderId);
+		if (!order) {
+			return res
+				.status(404)
+				.json({ message: 'Order not found' });
+		}
+
+		if (order.status !== 'accepted') {
+			return res.status(400).json({
+				message:
+					'Order must be accepted by a runner before assigning a runner to it',
+			});
+		}
+
+		// Update the order with runner's information
+		order.runnerInfo = {
+			runnerId,
+			accepted: true,
+			acceptedAt: new Date(),
+		};
+		order.status = 'in progress'; // Change status to 'in progress'
+
+		await order.save();
+
+		// Emit events to notify the store and customer
+		io.emit('orderRunnerAssigned', {
+			message: 'A runner has been assigned to your order',
+			order,
+		});
+		io.emit('orderRunnerAssignedStore', {
+			message: 'A runner has been assigned to the order',
+			order,
+		});
+
+		res.status(200).json({
+			message: 'Runner successfully assigned to the order',
+			order,
+		});
+	} catch (error) {
+		console.error('Error adding runner to order:', error);
+		res.status(500).json({
+			message: 'Error assigning runner to the order',
+			error: error.message,
+		});
 	}
 };

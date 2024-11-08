@@ -1,6 +1,28 @@
 // models/runnerModel.js
 import mongoose from 'mongoose';
 
+const transactionSchema = new mongoose.Schema(
+	{
+		type: {
+			type: String,
+			enum: ['earning', 'withdrawal'], // Define types of transactions
+			required: true,
+		},
+		amount: {
+			type: Number,
+			required: true,
+		},
+		date: {
+			type: Date,
+			default: Date.now, // Automatically set the transaction date
+		},
+		description: {
+			type: String, // Optional field to describe the transaction
+		},
+	},
+	{ _id: false },
+);
+
 const runnerSchema = new mongoose.Schema(
 	{
 		name: {
@@ -28,6 +50,8 @@ const runnerSchema = new mongoose.Schema(
 		},
 		wallet: { type: Number, default: 0 },
 		isActive: { type: Boolean, default: false },
+		transactions: [transactionSchema], // Array of transactions
+		price: { type: Number, default: 200 },
 	},
 	{ timestamps: true },
 );
