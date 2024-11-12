@@ -3,6 +3,10 @@ import {
 	findBusinessesByServiceTypeAndCampus,
 	findBusinessAndProductsById,
 	findBusinessById,
+	updateSubscription,
+	getSubscriptionInfo,
+	getPaymentInfo,
+	addPaymentInfo,
 } from '../controllers/businessController.js';
 
 const router = express.Router();
@@ -11,5 +15,14 @@ const router = express.Router();
 router.get('/', findBusinessesByServiceTypeAndCampus);
 router.get('/:businessId', findBusinessAndProductsById);
 router.get('/b/:businessId', findBusinessById);
+router.get('/:businessId/payment', getPaymentInfo);
+router.post('/:businessId/payment', addPaymentInfo);
+
+// Subscription routes
+router.put('/:businessId/subscription', updateSubscription);
+router.get(
+	'/:businessId/subscription',
+	getSubscriptionInfo,
+);
 
 export default router;

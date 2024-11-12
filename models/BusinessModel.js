@@ -1,5 +1,14 @@
 import mongoose from 'mongoose';
 
+const paymentInfoSchema = new mongoose.Schema(
+	{
+		bankName: { type: String, required: true },
+		accountNumber: { type: String, required: true },
+		accountName: { type: String, required: true },
+	},
+	{ _id: false },
+);
+
 const businessSchema = new mongoose.Schema({
 	phone: { type: String, required: true, unique: true },
 	isVerified: { type: Boolean, default: false },
@@ -15,6 +24,24 @@ const businessSchema = new mongoose.Schema({
 	storeLink: { type: String },
 	rating: { type: Number, default: 0 },
 	estimatedDelivery: { type: String, default: '10 mins' },
+	paymentInfo: { type: [paymentInfoSchema], default: [] },
+	// Subscription plan fields
+	plan: {
+		name: {
+			type: String,
+			enum: ['Starter', 'Economy', 'Pro'],
+			// required: true,
+			default: 'Starter',
+		},
+		type: {
+			type: String,
+			enum: ['Monthly', 'Annual'],
+			// required: true,
+		},
+		startDate: { type: Date, default: Date.now },
+		expiryDate: { type: Date },
+		isActive: { type: Boolean, default: true },
+	},
 });
 
 export default mongoose.model('Business', businessSchema);
