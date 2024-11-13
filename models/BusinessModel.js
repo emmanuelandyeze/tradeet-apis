@@ -42,6 +42,9 @@ const businessSchema = new mongoose.Schema({
 		expiryDate: { type: Date },
 		isActive: { type: Boolean, default: true },
 	},
+	openingHours: { type: String },
+	description: { type: String },
+	theme: { type: String },
 });
 
 export default mongoose.model('Business', businessSchema);

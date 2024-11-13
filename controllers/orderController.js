@@ -447,19 +447,14 @@ export const completeOrderByVendor = async (req, res) => {
 				.json({ message: 'Order not found' });
 		}
 
-		if (order.storeId.toString() !== storeId.toString()) {
-			return res.status(403).json({
+		if (order.status !== 'accepted') {
+			return res.status(400).json({
 				message:
-					'You are not authorized to confirm this order',
+					'Order cannot be completed in the current status',
 			});
 		}
 
-		// if (order.status !== 'pending') {
-		// 	return res.status(400).json({
-		// 		message:
-		// 			'Order cannot be accepted in the current status',
-		// 	});
-		// }
+		console.log(order);
 
 		order.status = 'completed';
 		await order.save();

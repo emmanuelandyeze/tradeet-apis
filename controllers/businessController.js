@@ -259,3 +259,68 @@ export const getSubscriptionInfo = async (req, res) => {
 		res.status(500).json({ message: 'Server error. Please try again later.' });
 	}
 };
+
+// Controller to update business information
+export const updateBusinessInfo = async (req, res) => {
+	const { businessId } = req.params;
+	const {
+		name,
+		logoUrl,
+		address,
+		serviceType,
+		campus,
+		storeLink,
+		rating,
+		estimatedDelivery,
+		openingHours,
+		description,
+		theme,
+		plan, // Include plan object if provided in the request
+	} = req.body;
+
+	try {
+		// Find the business by ID
+		const business = await Business.findById(businessId);
+
+		// If the business is not found, return a 404 response
+		if (!business) {
+			return res.status(404).json({ message: 'Business not found.' });
+		}
+
+		// Update business fields if they are provided in the request
+		if (name) business.name = name;
+		if (logoUrl) business.logoUrl = logoUrl;
+		if (address) business.address = address;
+		if (serviceType) business.serviceType = serviceType;
+		if (campus) business.campus = campus;
+		if (storeLink) business.storeLink = storeLink;
+		if (rating) business.rating = rating;
+		if (estimatedDelivery) business.estimatedDelivery = estimatedDelivery;
+		if (openingHours) business.openingHours = openingHours;
+		if (description) business.description = description;
+		if (theme) business.theme = theme;
+
+		// If plan is provided, update subscription details
+		if (plan) {
+			if (plan.name) business.plan.name = plan.name;
+			if (plan.type) business.plan.type = plan.type;
+			if (plan.startDate) business.plan.startDate = plan.startDate;
+			if (plan.expiryDate) business.plan.expiryDate = plan.expiryDate;
+			if (plan.isActive !== undefined) business.plan.isActive = plan.isActive;
+		}
+
+		// Save the updated business information
+		await business.save();
+
+		// Return the updated business information
+		res.status(200).json({
+			success: true,
+			message: 'Business information updated successfully.',
+			business: business,
+		});
+	} catch (error) {
+		// Handle errors and return a 500 response
+		console.error(error);
+		res.status(500).json({ message: 'Server error. Please try again later.' });
+	}
+};

@@ -7,6 +7,7 @@ import {
 	getSubscriptionInfo,
 	getPaymentInfo,
 	addPaymentInfo,
+	updateBusinessInfo,
 } from '../controllers/businessController.js';
 
 const router = express.Router();
@@ -24,5 +25,6 @@ router.get(
 	'/:businessId/subscription',
 	getSubscriptionInfo,
 );
+router.put('/:businessId', updateBusinessInfo);
 
 export default router;
