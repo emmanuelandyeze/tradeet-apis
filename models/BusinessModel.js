@@ -11,7 +11,7 @@ const paymentInfoSchema = new mongoose.Schema(
 
 const businessSchema = new mongoose.Schema({
 	phone: { type: String, required: true, unique: true },
-	isVerified: { type: Boolean, default: false },
+	isVerified: { type: Boolean, default: true },
 	verificationCode: String, // store the code temporarily
 	name: { type: String },
 	logoUrl: { type: String },
