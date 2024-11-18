@@ -276,6 +276,7 @@ export const updateBusinessInfo = async (req, res) => {
 		description,
 		theme,
 		plan, // Include plan object if provided in the request
+		expoToken,
 	} = req.body;
 
 	try {
@@ -299,6 +300,7 @@ export const updateBusinessInfo = async (req, res) => {
 		if (openingHours) business.openingHours = openingHours;
 		if (description) business.description = description;
 		if (theme) business.theme = theme;
+		if (expoToken) business.expoToken = expoToken;
 
 		// If plan is provided, update subscription details
 		if (plan) {

@@ -45,6 +45,7 @@ const businessSchema = new mongoose.Schema({
 	openingHours: { type: String },
 	description: { type: String },
 	theme: { type: String },
+	expoToken: { type: String },
 });
 
 export default mongoose.model('Business', businessSchema);
