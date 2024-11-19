@@ -15,6 +15,7 @@ export const createOrder = async (req, res, next) => {
 			itemsAmount,
 			runnerInfo,
 			status,
+			discountCode,
 		} = req.body;
 
 		// Fetch the user's wallet information from the database
@@ -69,6 +70,7 @@ export const createOrder = async (req, res, next) => {
 			status, // Default order status
 			runnerInfo, // Optional field for tracking runner information
 			deliveryCode, // Add the delivery code to the order
+			discountCode, // Add the discount code to the order
 		});
 
 		await newOrder.save();

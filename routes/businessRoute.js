@@ -26,7 +26,7 @@ router.post(
 );
 
 // Subscription routes
-router.put('/:businessId/subscription', updateSubscription);
+router.put('/:businessId/subscription', updateSubscription); 
 router.get(
 	'/:businessId/subscription',
 	getSubscriptionInfo,

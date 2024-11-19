@@ -25,6 +25,7 @@ const businessSchema = new mongoose.Schema({
 	rating: { type: Number, default: 0 },
 	estimatedDelivery: { type: String, default: '10 mins' },
 	paymentInfo: { type: [paymentInfoSchema], default: [] },
+	email: { type: String },
 	// Subscription plan fields
 	plan: {
 		name: {
@@ -34,9 +35,7 @@ const businessSchema = new mongoose.Schema({
 			default: 'Starter',
 		},
 		type: {
-			type: String,
-			enum: ['Monthly', 'Annual'],
-			// required: true,
+			type: Number,
 		},
 		startDate: { type: Date, default: Date.now },
 		expiryDate: { type: Date },

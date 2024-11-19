@@ -54,6 +54,7 @@ const orderSchema = new mongoose.Schema(
 			required: true,
 		},
 		totalAmount: { type: Number }, // Amount to be paid
+		discountCode: { type: String },
 		itemsAmount: { type: Number }, // Amount for store
 		orderNumber: { type: String }, // Order number
 		deliveryCode: { type: String }, // Delivery code

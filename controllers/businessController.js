@@ -268,9 +268,9 @@ export const updateSubscription = async (req, res) => {
 
 		const calculateExpiryDate = (startDate, planType) => {
 			const expiryDate = new Date(startDate);
-			if (planType === 'Monthly') {
+			if (planType === 1) {
 				expiryDate.setMonth(expiryDate.getMonth() + 1);
-			} else if (planType === 'Annual') {
+			} else if (planType === 12) {
 				expiryDate.setFullYear(
 					expiryDate.getFullYear() + 1,
 				);
@@ -350,6 +350,7 @@ export const updateBusinessInfo = async (req, res) => {
 		theme,
 		plan, // Include plan object if provided in the request
 		expoToken,
+		email,
 	} = req.body;
 
 	try {
@@ -377,6 +378,7 @@ export const updateBusinessInfo = async (req, res) => {
 		if (description) business.description = description;
 		if (theme) business.theme = theme;
 		if (expoToken) business.expoToken = expoToken;
+		if (email) business.email = email;
 
 		// If plan is provided, update subscription details
 		if (plan) {
@@ -402,11 +404,9 @@ export const updateBusinessInfo = async (req, res) => {
 	} catch (error) {
 		// Handle errors and return a 500 response
 		console.error(error);
-		res
-			.status(500)
-			.json({
-				message: 'Server error. Please try again later.',
-			});
+		res.status(500).json({
+			message: 'Server error. Please try again later.',
+		});
 	}
 };
 
