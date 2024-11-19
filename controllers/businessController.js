@@ -1,5 +1,7 @@
+import BusinessModel from '../models/BusinessModel.js';
 import Business from '../models/BusinessModel.js'; // Import the Business model
 import { Product } from '../models/Product.js'; // Import the Product model
+import Order from '../models/Order.js';
 
 // Controller to find businesses by service type and campus
 export const findBusinessesByServiceTypeAndCampus = async (
@@ -80,31 +82,33 @@ export const findBusinessAndProductsById = async (
 
 // Controller to get business information by business ID
 export const findBusinessById = async (req, res) => {
-  const { businessId } = req.params;
+	const { businessId } = req.params;
 
-  try {
-    // Find the business by the provided businessId, excluding password
-    const business = await Business.findById(businessId).select('-password');
+	try {
+		// Find the business by the provided businessId, excluding password
+		const business = await Business.findById(
+			businessId,
+		).select('-password');
 
-    // If the business is not found, return a 404 response
-    if (!business) {
-      return res.status(404).json({
-        message: 'Business not found.',
-      });
-    }
+		// If the business is not found, return a 404 response
+		if (!business) {
+			return res.status(404).json({
+				message: 'Business not found.',
+			});
+		}
 
-    // Return the business details
-    res.status(200).json({
-      success: true,
-      business: business,
-    });
-  } catch (error) {
-    // Handle errors and return a 500 response
-    console.error(error);
-    res.status(500).json({
-      message: 'Server error. Please try again later.',
-    });
-  }
+		// Return the business details
+		res.status(200).json({
+			success: true,
+			business: business,
+		});
+	} catch (error) {
+		// Handle errors and return a 500 response
+		console.error(error);
+		res.status(500).json({
+			message: 'Server error. Please try again later.',
+		});
+	}
 };
 
 // Controller to add a new payment info
@@ -116,17 +120,29 @@ export const addPaymentInfo = async (req, res) => {
 		const business = await Business.findById(businessId);
 
 		if (!business) {
-			return res.status(404).json({ message: 'Business not found.' });
+			return res
+				.status(404)
+				.json({ message: 'Business not found.' });
 		}
 
-		const newPaymentInfo = { bankName, accountNumber, accountName };
+		const newPaymentInfo = {
+			bankName,
+			accountNumber,
+			accountName,
+		};
 		business.paymentInfo.push(newPaymentInfo);
 
 		await business.save();
-		res.status(201).json({ success: true, paymentInfo: newPaymentInfo });
+		res
+			.status(201)
+			.json({ success: true, paymentInfo: newPaymentInfo });
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ message: 'Server error. Please try again later.' });
+		res
+			.status(500)
+			.json({
+				message: 'Server error. Please try again later.',
+			});
 	}
 };
 
@@ -139,12 +155,16 @@ export const updatePaymentInfo = async (req, res) => {
 		const business = await Business.findById(businessId);
 
 		if (!business) {
-			return res.status(404).json({ message: 'Business not found.' });
+			return res
+				.status(404)
+				.json({ message: 'Business not found.' });
 		}
 
 		const paymentInfo = business.paymentInfo.id(paymentId);
 		if (!paymentInfo) {
-			return res.status(404).json({ message: 'Payment info not found.' });
+			return res
+				.status(404)
+				.json({ message: 'Payment info not found.' });
 		}
 
 		paymentInfo.bankName = bankName;
@@ -155,7 +175,11 @@ export const updatePaymentInfo = async (req, res) => {
 		res.status(200).json({ success: true, paymentInfo });
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ message: 'Server error. Please try again later.' });
+		res
+			.status(500)
+			.json({
+				message: 'Server error. Please try again later.',
+			});
 	}
 };
 
@@ -167,20 +191,33 @@ export const deletePaymentInfo = async (req, res) => {
 		const business = await Business.findById(businessId);
 
 		if (!business) {
-			return res.status(404).json({ message: 'Business not found.' });
+			return res
+				.status(404)
+				.json({ message: 'Business not found.' });
 		}
 
 		const paymentInfo = business.paymentInfo.id(paymentId);
 		if (!paymentInfo) {
-			return res.status(404).json({ message: 'Payment info not found.' });
+			return res
+				.status(404)
+				.json({ message: 'Payment info not found.' });
 		}
 
 		paymentInfo.remove();
 		await business.save();
-		res.status(200).json({ success: true, message: 'Payment info deleted.' });
+		res
+			.status(200)
+			.json({
+				success: true,
+				message: 'Payment info deleted.',
+			});
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ message: 'Server error. Please try again later.' });
+		res
+			.status(500)
+			.json({
+				message: 'Server error. Please try again later.',
+			});
 	}
 };
 
@@ -189,16 +226,29 @@ export const getPaymentInfo = async (req, res) => {
 	const { businessId } = req.params;
 
 	try {
-		const business = await Business.findById(businessId).select('paymentInfo');
+		const business = await Business.findById(
+			businessId,
+		).select('paymentInfo');
 
 		if (!business) {
-			return res.status(404).json({ message: 'Business not found.' });
+			return res
+				.status(404)
+				.json({ message: 'Business not found.' });
 		}
 
-		res.status(200).json({ success: true, paymentInfo: business.paymentInfo });
+		res
+			.status(200)
+			.json({
+				success: true,
+				paymentInfo: business.paymentInfo,
+			});
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ message: 'Server error. Please try again later.' });
+		res
+			.status(500)
+			.json({
+				message: 'Server error. Please try again later.',
+			});
 	}
 };
 
@@ -211,7 +261,9 @@ export const updateSubscription = async (req, res) => {
 		const business = await Business.findById(businessId);
 
 		if (!business) {
-			return res.status(404).json({ message: 'Business not found.' });
+			return res
+				.status(404)
+				.json({ message: 'Business not found.' });
 		}
 
 		const calculateExpiryDate = (startDate, planType) => {
@@ -219,12 +271,17 @@ export const updateSubscription = async (req, res) => {
 			if (planType === 'Monthly') {
 				expiryDate.setMonth(expiryDate.getMonth() + 1);
 			} else if (planType === 'Annual') {
-				expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+				expiryDate.setFullYear(
+					expiryDate.getFullYear() + 1,
+				);
 			}
 			return expiryDate;
 		};
 
-		const expiryDate = calculateExpiryDate(startDate, planType);
+		const expiryDate = calculateExpiryDate(
+			startDate,
+			planType,
+		);
 
 		business.plan = {
 			name: planName,
@@ -235,10 +292,16 @@ export const updateSubscription = async (req, res) => {
 		};
 
 		await business.save();
-		res.status(200).json({ success: true, plan: business.plan });
+		res
+			.status(200)
+			.json({ success: true, plan: business.plan });
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ message: 'Server error. Please try again later.' });
+		res
+			.status(500)
+			.json({
+				message: 'Server error. Please try again later.',
+			});
 	}
 };
 
@@ -247,16 +310,26 @@ export const getSubscriptionInfo = async (req, res) => {
 	const { businessId } = req.params;
 
 	try {
-		const business = await Business.findById(businessId).select('plan');
+		const business = await Business.findById(
+			businessId,
+		).select('plan');
 
 		if (!business) {
-			return res.status(404).json({ message: 'Business not found.' });
+			return res
+				.status(404)
+				.json({ message: 'Business not found.' });
 		}
 
-		res.status(200).json({ success: true, plan: business.plan });
+		res
+			.status(200)
+			.json({ success: true, plan: business.plan });
 	} catch (error) {
 		console.error(error);
-		res.status(500).json({ message: 'Server error. Please try again later.' });
+		res
+			.status(500)
+			.json({
+				message: 'Server error. Please try again later.',
+			});
 	}
 };
 
@@ -285,7 +358,9 @@ export const updateBusinessInfo = async (req, res) => {
 
 		// If the business is not found, return a 404 response
 		if (!business) {
-			return res.status(404).json({ message: 'Business not found.' });
+			return res
+				.status(404)
+				.json({ message: 'Business not found.' });
 		}
 
 		// Update business fields if they are provided in the request
@@ -296,7 +371,8 @@ export const updateBusinessInfo = async (req, res) => {
 		if (campus) business.campus = campus;
 		if (storeLink) business.storeLink = storeLink;
 		if (rating) business.rating = rating;
-		if (estimatedDelivery) business.estimatedDelivery = estimatedDelivery;
+		if (estimatedDelivery)
+			business.estimatedDelivery = estimatedDelivery;
 		if (openingHours) business.openingHours = openingHours;
 		if (description) business.description = description;
 		if (theme) business.theme = theme;
@@ -306,9 +382,12 @@ export const updateBusinessInfo = async (req, res) => {
 		if (plan) {
 			if (plan.name) business.plan.name = plan.name;
 			if (plan.type) business.plan.type = plan.type;
-			if (plan.startDate) business.plan.startDate = plan.startDate;
-			if (plan.expiryDate) business.plan.expiryDate = plan.expiryDate;
-			if (plan.isActive !== undefined) business.plan.isActive = plan.isActive;
+			if (plan.startDate)
+				business.plan.startDate = plan.startDate;
+			if (plan.expiryDate)
+				business.plan.expiryDate = plan.expiryDate;
+			if (plan.isActive !== undefined)
+				business.plan.isActive = plan.isActive;
 		}
 
 		// Save the updated business information
@@ -323,6 +402,82 @@ export const updateBusinessInfo = async (req, res) => {
 	} catch (error) {
 		// Handle errors and return a 500 response
 		console.error(error);
-		res.status(500).json({ message: 'Server error. Please try again later.' });
+		res
+			.status(500)
+			.json({
+				message: 'Server error. Please try again later.',
+			});
+	}
+};
+
+export const updateExpoToken = async (req, res) => {
+	try {
+		const { expoPushToken } = req.body;
+		const { businessId } = req.params;
+
+		if (!expoPushToken) {
+			return res
+				.status(400)
+				.json({ message: 'Expo Push Token is required' });
+		}
+
+		// Update the user's record in the database
+		await Business.findByIdAndUpdate(businessId, {
+			expoPushToken,
+		});
+
+		return res.status(200).json({
+			message: 'Expo Push Token updated successfully',
+		});
+	} catch (error) {
+		console.error('Error updating expoPushToken:', error);
+		res
+			.status(500)
+			.json({ message: 'Internal Server Error' });
+	}
+};
+
+// Mark an order as delivered by a runner
+export const markOrderAsDelivered = async (req, res) => {
+	const { businessId, orderId } = req.params;
+	const { deliveryCode } = req.body;
+
+	console.log(businessId, orderId, deliveryCode);
+
+	try {
+		// Find the order by ID and check if the runner matches
+		const order = await Order.findOne({
+			_id: orderId,
+			storeId: businessId,
+		});
+
+		if (!order) {
+			return res.status(404).json({
+				message:
+					'Order not found or does not belong to this business',
+			});
+		}
+
+		// Check if the delivery code matches
+		if (order.deliveryCode !== deliveryCode) {
+			return res.status(400).json({
+				message: 'Invalid delivery code',
+			});
+		}
+
+		// Update the order status to "completed"
+		order.status = 'completed';
+		await order.save();
+
+		res.status(200).json({
+			message: 'Order marked as delivered',
+			order,
+		});
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({
+			message: 'Error marking order as delivered',
+			error: error.message,
+		});
 	}
 };

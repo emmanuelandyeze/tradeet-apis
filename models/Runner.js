@@ -52,6 +52,7 @@ const runnerSchema = new mongoose.Schema(
 		isActive: { type: Boolean, default: false },
 		transactions: [transactionSchema], // Array of transactions
 		price: { type: Number, default: 200 },
+		expoPushToken: { type: String },
 	},
 	{ timestamps: true },
 );

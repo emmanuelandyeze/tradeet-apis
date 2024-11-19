@@ -6,6 +6,7 @@ import {
 	login,
 	getStudentInfo,
 	completeCampusProfile,
+	updateExpoToken,
 } from '../controllers/studentAuthController.js';
 import { protect } from '../middlewares/studentAuthMiddleware.js';
 
@@ -20,5 +21,6 @@ router.post(
 );
 router.post('/login', login);
 router.get('/me', protect, getStudentInfo); 
+router.put('/:studentId/expo-token', updateExpoToken);
 
 export default router;

@@ -241,3 +241,31 @@ export const getStudentInfo = async (req, res) => {
 			.json({ message: 'Server error', error });
 	}
 };
+
+//Update Expo Notification Token
+export const updateExpoToken = async (req, res) => {
+	try {
+		const { expoPushToken } = req.body;
+		const { studentId } = req.params;
+
+		if (!expoPushToken) {
+			return res
+				.status(400)
+				.json({ message: 'Expo Push Token is required' });
+		}
+
+		// Update the user's record in the database
+		await StudentModel.findByIdAndUpdate(studentId, {
+			expoPushToken,
+		});
+
+		return res.status(200).json({
+			message: 'Expo Push Token updated successfully',
+		});
+	} catch (error) {
+		console.error('Error updating expoPushToken:', error);
+		res
+			.status(500)
+			.json({ message: 'Internal Server Error' });
+	}
+};

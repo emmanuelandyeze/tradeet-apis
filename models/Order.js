@@ -11,6 +11,8 @@ const orderSchema = new mongoose.Schema(
 			name: { type: String, required: true },
 			contact: { type: String, required: true },
 			address: { type: String },
+			expoPushToken: { type: String },
+			pickUp: { type: Boolean },
 		},
 		runnerInfo: {
 			runnerId: {

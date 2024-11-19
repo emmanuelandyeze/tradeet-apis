@@ -9,6 +9,7 @@ const StudentSchema = new mongoose.Schema({
 	verificationCode: { type: String },
 	createdAt: { type: Date, default: Date.now },
 	wallet: { type: Number },
+	expoPushToken: { type: String },
 });
 
 export default mongoose.model('Student', StudentSchema); 

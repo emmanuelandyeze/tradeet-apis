@@ -6,6 +6,7 @@ import {
 	login,
 	getRunnerInfo,
 	completeCampusProfile,
+	updateExpoToken,
 } from '../controllers/runnerAuthController.js';
 import { protect } from '../middlewares/runnerAuthMiddleware.js';
 
@@ -20,5 +21,6 @@ router.post(
 );
 router.post('/login', login);
 router.get('/me', protect, getRunnerInfo);
+router.put('/:runnerId/expo-token', updateExpoToken);
 
 export default router;

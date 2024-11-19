@@ -24,7 +24,7 @@ const deliveryRequestSchema = new mongoose.Schema({
 	runnerInfo: {
 		runnerId: {
 			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Runner', // Reference to Runner model
+			ref: 'Runner',
 			default: null,
 		},
 		accepted: {

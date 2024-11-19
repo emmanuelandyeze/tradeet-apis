@@ -8,6 +8,8 @@ import {
 	getPaymentInfo,
 	addPaymentInfo,
 	updateBusinessInfo,
+	updateExpoToken,
+	markOrderAsDelivered,
 } from '../controllers/businessController.js';
 
 const router = express.Router();
@@ -18,6 +20,10 @@ router.get('/:businessId', findBusinessAndProductsById);
 router.get('/b/:businessId', findBusinessById);
 router.get('/:businessId/payment', getPaymentInfo);
 router.post('/:businessId/payment', addPaymentInfo);
+router.post(
+	'/:businessId/order/:orderId/delivered',
+	markOrderAsDelivered,
+);
 
 // Subscription routes
 router.put('/:businessId/subscription', updateSubscription);
@@ -26,5 +32,6 @@ router.get(
 	getSubscriptionInfo,
 );
 router.put('/:businessId', updateBusinessInfo);
+router.put('/:businessId/expo-token', updateExpoToken);
 
 export default router;
