@@ -15,6 +15,7 @@ export const findBusinessesByServiceTypeAndCampus = async (
 		const businesses = await Business.find({
 			serviceType: serviceType, // Match the provided serviceType
 			campus: campus, // Match the provided campus
+			isVendor: true,
 		});
 
 		// If no businesses are found, return a 404 response
@@ -138,11 +139,9 @@ export const addPaymentInfo = async (req, res) => {
 			.json({ success: true, paymentInfo: newPaymentInfo });
 	} catch (error) {
 		console.error(error);
-		res
-			.status(500)
-			.json({
-				message: 'Server error. Please try again later.',
-			});
+		res.status(500).json({
+			message: 'Server error. Please try again later.',
+		});
 	}
 };
 
@@ -175,11 +174,9 @@ export const updatePaymentInfo = async (req, res) => {
 		res.status(200).json({ success: true, paymentInfo });
 	} catch (error) {
 		console.error(error);
-		res
-			.status(500)
-			.json({
-				message: 'Server error. Please try again later.',
-			});
+		res.status(500).json({
+			message: 'Server error. Please try again later.',
+		});
 	}
 };
 
@@ -205,19 +202,15 @@ export const deletePaymentInfo = async (req, res) => {
 
 		paymentInfo.remove();
 		await business.save();
-		res
-			.status(200)
-			.json({
-				success: true,
-				message: 'Payment info deleted.',
-			});
+		res.status(200).json({
+			success: true,
+			message: 'Payment info deleted.',
+		});
 	} catch (error) {
 		console.error(error);
-		res
-			.status(500)
-			.json({
-				message: 'Server error. Please try again later.',
-			});
+		res.status(500).json({
+			message: 'Server error. Please try again later.',
+		});
 	}
 };
 
@@ -236,19 +229,15 @@ export const getPaymentInfo = async (req, res) => {
 				.json({ message: 'Business not found.' });
 		}
 
-		res
-			.status(200)
-			.json({
-				success: true,
-				paymentInfo: business.paymentInfo,
-			});
+		res.status(200).json({
+			success: true,
+			paymentInfo: business.paymentInfo,
+		});
 	} catch (error) {
 		console.error(error);
-		res
-			.status(500)
-			.json({
-				message: 'Server error. Please try again later.',
-			});
+		res.status(500).json({
+			message: 'Server error. Please try again later.',
+		});
 	}
 };
 
@@ -297,11 +286,9 @@ export const updateSubscription = async (req, res) => {
 			.json({ success: true, plan: business.plan });
 	} catch (error) {
 		console.error(error);
-		res
-			.status(500)
-			.json({
-				message: 'Server error. Please try again later.',
-			});
+		res.status(500).json({
+			message: 'Server error. Please try again later.',
+		});
 	}
 };
 
@@ -325,11 +312,9 @@ export const getSubscriptionInfo = async (req, res) => {
 			.json({ success: true, plan: business.plan });
 	} catch (error) {
 		console.error(error);
-		res
-			.status(500)
-			.json({
-				message: 'Server error. Please try again later.',
-			});
+		res.status(500).json({
+			message: 'Server error. Please try again later.',
+		});
 	}
 };
 
@@ -351,6 +336,7 @@ export const updateBusinessInfo = async (req, res) => {
 		plan, // Include plan object if provided in the request
 		expoToken,
 		email,
+		isVendor,
 	} = req.body;
 
 	try {
@@ -379,6 +365,7 @@ export const updateBusinessInfo = async (req, res) => {
 		if (theme) business.theme = theme;
 		if (expoToken) business.expoToken = expoToken;
 		if (email) business.email = email;
+		if (isVendor) business.isVendor = isVendor;
 
 		// If plan is provided, update subscription details
 		if (plan) {
