@@ -8,13 +8,13 @@ export const findBusinessesByServiceTypeAndCampus = async (
 	req,
 	res,
 ) => {
-	const { serviceType, campus } = req.query;
+	const { serviceType } = req.query;
 
 	try {
 		// Find businesses that match both serviceType and campus
 		const businesses = await Business.find({
 			serviceType: serviceType, // Match the provided serviceType
-			campus: campus, // Match the provided campus
+			// campus: campus, // Match the provided campus
 			isVendor: true,
 		});
 
@@ -70,6 +70,73 @@ export const findBusinessAndProductsById = async (
 		res.status(200).json({
 			success: true,
 			business: business,
+			products: products,
+		});
+	} catch (error) {
+		// Handle errors and return a 500 response
+		console.error(error);
+		res.status(500).json({
+			message: 'Server error. Please try again later.',
+		});
+	}
+};
+
+export const findBusinessByStoreLink = async (req, res) => {
+	const { storeLink } = req.params;
+	console.log(storeLink);
+
+	try {
+		// Find the business by the provided businessId
+		const business = await Business.findOne({
+			storeLink,
+		}).select('-password');
+
+		// If the business is not found, return a 404 response
+		if (!business) {
+			return res.status(404).json({
+				message: 'Business not found.',
+			});
+		}
+
+		// Return the business details along with the associated products
+		res.status(200).json({
+			success: true,
+			business: business,
+		});
+	} catch (error) {
+		// Handle errors and return a 500 response
+		console.error(error);
+		res.status(500).json({
+			message: 'Server error. Please try again later.',
+		});
+	}
+};
+
+export const findBusinessProducts = async (req, res) => {
+	const { businessId } = req.params;
+	// const {  } = req.body;
+
+	try {
+		// Find the business by the provided businessId
+		const business = await Business.findById(
+			businessId,
+		).select('-password');
+
+		// If the business is not found, return a 404 response
+		if (!business) {
+			return res.status(404).json({
+				message: 'Business not found.',
+			});
+		}
+
+		// Find all products that belong to the specific business
+		const products = await Product.find({
+			storeId: businessId,
+		});
+
+		// Return the business details along with the associated products
+		res.status(200).json({
+			success: true,
 			products: products,
 		});
 	} catch (error) {
