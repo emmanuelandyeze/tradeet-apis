@@ -14,6 +14,7 @@ import {
 	cancelOrderByVendor,
 	completeOrderByVendor,
 	addRunner,
+	updatePayment,
 } from '../controllers/orderController.js';
 
 const router = Router();
@@ -22,6 +23,7 @@ router.post('/', createOrder);
 router.put('/:orderId/accept', acceptOrder);
 router.get('/', getAllOrders);
 router.get('/:orderId', getOrderById);
+router.put('/:orderId/pay', updatePayment);
 router.put('/:orderId/status', updateOrderStatus);
 router.delete('/:orderId', cancelOrder);
 router.get('/store/:storeId', getOrdersForStore); // Get orders for a specific store

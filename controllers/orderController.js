@@ -81,6 +81,7 @@ export const createOrder = async (req, res, next) => {
 		res.status(201).json({
 			message: 'Order placed successfully',
 			order: newOrder,
+			orderId: newOrder._id,
 		});
 	} catch (error) {
 		res.status(500).json({
@@ -165,7 +166,10 @@ export const getOrderById = async (req, res) => {
 				.json({ message: 'Order not found' });
 		}
 
-		res.json(order);
+		res.status(200).json({
+			order,
+			message: 'Order found',
+		});
 	} catch (error) {
 		res.status(500).json({
 			message: 'Error fetching order',
@@ -520,6 +524,60 @@ export const addRunner = async (req, res) => {
 		console.error('Error adding runner to order:', error);
 		res.status(500).json({
 			message: 'Error assigning runner to the order',
+			error: error.message,
+		});
+	}
+};
+
+// Update payment
+export const updatePayment = async (req, res) => {
+	const { orderId } = req.params;
+	const { type, status, statusUpdatedAt } = req.body;
+
+	// Validate input
+	if (!type || !status) {
+		return res.status(400).json({
+			message:
+				'Type and status are required to update payment',
+		});
+	}
+
+	try {
+		// Find and update the payment details within the order
+		const updatedOrder = await Order.findByIdAndUpdate(
+			orderId,
+			{
+				$set: {
+					'payment.type': type,
+					'payment.status': status,
+					'payment.statusUpdatedAt':
+						statusUpdatedAt || new Date(),
+				},
+			},
+			{ new: true },
+		);
+
+		if (!updatedOrder) {
+			return res
+				.status(404)
+				.json({ message: 'Order not found' });
+		}
+
+		// Emit an event to notify clients of the update
+		io.emit('orderPaymentStatusUpdated', {
+			message: 'Payment status updated for the order',
+			order: updatedOrder,
+		});
+
+		return res.json({
+			updatedOrder,
+			message: 'Payment status updated successfully',
+			statusText: 'success',
+		});
+	} catch (error) {
+		console.error('Error updating payment:', error);
+		return res.status(500).json({
+			message: 'Error updating payment status',
 			error: error.message,
 		});
 	}
