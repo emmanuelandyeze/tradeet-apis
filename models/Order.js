@@ -51,7 +51,6 @@ const orderSchema = new mongoose.Schema(
 		userId: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'Student',
-			required: true,
 		},
 		totalAmount: { type: Number }, // Amount to be paid
 		discountCode: { type: String },

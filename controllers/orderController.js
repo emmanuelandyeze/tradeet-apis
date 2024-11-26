@@ -20,13 +20,8 @@ export const createOrder = async (req, res, next) => {
 
 		// Fetch the user's wallet information from the database
 		const user = await StudentModel.findById(userId);
-		if (!user) {
-			return res
-				.status(404)
-				.json({ message: 'User not found' });
-		}
 
-		let userWalletBalance = user.wallet || 0; // Assuming there's a `walletBalance` field in the User model
+		let userWalletBalance = user?.wallet || 0; // Assuming there's a `walletBalance` field in the User model
 
 		// Fetch the number of existing orders for the store
 		const orderCount = await Order.countDocuments({
@@ -74,6 +69,8 @@ export const createOrder = async (req, res, next) => {
 		});
 
 		await newOrder.save();
+
+		console.log(newOrder);
 
 		// Emit an event to the store that a new order has been placed
 		io.emit('newOrder', {
