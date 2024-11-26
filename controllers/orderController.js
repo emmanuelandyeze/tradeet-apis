@@ -166,10 +166,7 @@ export const getOrderById = async (req, res) => {
 				.json({ message: 'Order not found' });
 		}
 
-		res.status(200).json({
-			order,
-			message: 'Order found',
-		});
+		res.status(200).json(order);
 	} catch (error) {
 		res.status(500).json({
 			message: 'Error fetching order',
