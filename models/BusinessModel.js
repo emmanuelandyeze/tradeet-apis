@@ -31,7 +31,6 @@ const businessSchema = new mongoose.Schema({
 		name: {
 			type: String,
 			enum: ['Starter', 'Economy', 'Pro'],
-			// required: true,
 			default: 'Starter',
 		},
 		type: {
@@ -45,6 +44,19 @@ const businessSchema = new mongoose.Schema({
 	description: { type: String },
 	theme: { type: String },
 	expoPushToken: { type: String },
+	location: {
+		type: {
+			type: String,
+			enum: ['Point'], // GeoJSON type must be "Point"
+			required: true,
+		},
+		coordinates: {
+			type: [Number], // [longitude, latitude]
+			required: true,
+		},
+	},
 });
+
+businessSchema.index({ location: '2dsphere' }); // Add geospatial index
 
 export default mongoose.model('Business', businessSchema);

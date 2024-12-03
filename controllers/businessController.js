@@ -385,6 +385,7 @@ export const getSubscriptionInfo = async (req, res) => {
 	}
 };
 
+
 // Controller to update business information
 export const updateBusinessInfo = async (req, res) => {
 	const { businessId } = req.params;
@@ -404,6 +405,8 @@ export const updateBusinessInfo = async (req, res) => {
 		expoToken,
 		email,
 		isVendor,
+		latitude,
+		longitude, // New fields for location coordinates
 	} = req.body;
 
 	try {
@@ -432,7 +435,8 @@ export const updateBusinessInfo = async (req, res) => {
 		if (theme) business.theme = theme;
 		if (expoToken) business.expoToken = expoToken;
 		if (email) business.email = email;
-		if (isVendor) business.isVendor = isVendor;
+		if (isVendor !== undefined)
+			business.isVendor = isVendor;
 
 		// If plan is provided, update subscription details
 		if (plan) {
@@ -444,6 +448,14 @@ export const updateBusinessInfo = async (req, res) => {
 				business.plan.expiryDate = plan.expiryDate;
 			if (plan.isActive !== undefined)
 				business.plan.isActive = plan.isActive;
+		}
+
+		// Update location coordinates if both latitude and longitude are provided
+		if (latitude !== undefined && longitude !== undefined) {
+			business.location = {
+				type: 'Point',
+				coordinates: [longitude, latitude],
+			};
 		}
 
 		// Save the updated business information
@@ -463,6 +475,7 @@ export const updateBusinessInfo = async (req, res) => {
 		});
 	}
 };
+
 
 export const updateExpoToken = async (req, res) => {
 	try {
