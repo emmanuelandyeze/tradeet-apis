@@ -1,10 +1,14 @@
 // controllers/productController.js
+import { Category } from '../models/Category.js';
 import { Product } from '../models/Product.js';
 
 // Get all products
 export const getProducts = async (req, res) => {
 	try {
-		const products = await Product.find();
+		// Fetch products and populate the storeId field
+		const products = await Product.find().populate(
+			'storeId',
+		);
 		res.status(200).json(products);
 	} catch (error) {
 		res
@@ -34,8 +38,16 @@ export const getProductById = async (req, res) => {
 // Get products by store ID
 export const getProductsByStore = async (req, res) => {
 	const { storeId } = req.params;
+	const { categoryId } = req.query; // Optional category filter
 	try {
-		const products = await Product.find({ storeId });
+		const filter = { storeId };
+		if (categoryId) {
+			filter.category = categoryId;
+		}
+
+		const products = await Product.find(filter).populate(
+			'category',
+		);
 		res.status(200).json(products);
 	} catch (error) {
 		res.status(500).json({
@@ -54,20 +66,22 @@ export const createProduct = async (req, res) => {
 		variants,
 		addOns,
 		description,
-		category,
+		category, // Category ID
 		storeId,
 	} = req.body;
+
 	try {
-		console.log(
-			name,
-			price,
-			image,
-			variants,
-			addOns,
-			description,
-			category,
+		// Validate that the category belongs to the store
+		const existingCategory = await Category.findOne({
+			_id: category,
 			storeId,
-		);
+		});
+		if (!existingCategory) {
+			return res.status(400).json({
+				message: 'Invalid category ID for this store',
+			});
+		}
+
 		const newProduct = new Product({
 			name,
 			price,
@@ -90,7 +104,7 @@ export const createProduct = async (req, res) => {
 
 // Update an existing product
 export const updateProduct = async (req, res) => {
-	const { id } = req.params;
+	const { id } = req.params; // Product ID
 	const {
 		name,
 		price,
@@ -98,10 +112,33 @@ export const updateProduct = async (req, res) => {
 		variants,
 		addOns,
 		description,
-		category,
+		category, // New category ID
 		storeId,
 	} = req.body;
+
 	try {
+		// Fetch the product to ensure it exists
+		const product = await Product.findById(id);
+		if (!product) {
+			return res
+				.status(404)
+				.json({ message: 'Product not found' });
+		}
+
+		// Validate that the new category belongs to the same store
+		if (category) {
+			const existingCategory = await Category.findOne({
+				_id: category,
+				storeId,
+			});
+			if (!existingCategory) {
+				return res.status(400).json({
+					message: 'Invalid category ID for this store',
+				});
+			}
+		}
+
+		// Update the product
 		const updatedProduct = await Product.findByIdAndUpdate(
 			id,
 			{
@@ -112,22 +149,19 @@ export const updateProduct = async (req, res) => {
 				addOns,
 				description,
 				category,
-				storeId,
 			},
-			{ new: true },
+			{ new: true }, // Return the updated product
 		);
-		if (!updatedProduct) {
-			return res
-				.status(404)
-				.json({ message: 'Product not found' });
-		}
+
 		res.status(200).json(updatedProduct);
 	} catch (error) {
-		res
-			.status(500)
-			.json({ message: 'Failed to update product', error });
+		res.status(500).json({
+			message: 'Failed to update product',
+			error,
+		});
 	}
 };
+
 
 // Delete a product
 export const deleteProduct = async (req, res) => {

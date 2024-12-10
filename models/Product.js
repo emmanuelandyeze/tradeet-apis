@@ -19,10 +19,13 @@ const productSchema = new mongoose.Schema({
 	variants: [variantSchema],
 	addOns: [addOnSchema],
 	description: { type: String },
-	category: { type: String }, // Category of the product
+	category: {
+		type: mongoose.Schema.Types.ObjectId,
+		ref: 'Category',
+	}, // Reference to Category
 	storeId: {
 		type: mongoose.Schema.Types.ObjectId,
-		ref: 'Store',
+		ref: 'Business',
 		required: true,
 	}, // Reference to the store that created the product
 });
