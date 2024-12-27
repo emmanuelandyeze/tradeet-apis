@@ -9,6 +9,40 @@ const paymentInfoSchema = new mongoose.Schema(
 	{ _id: false },
 );
 
+const OpeningHoursSchema = new mongoose.Schema(
+	{
+		Monday: {
+			open: { type: Number, required: true },
+			close: { type: Number, required: true },
+		},
+		Tuesday: {
+			open: { type: Number, required: true },
+			close: { type: Number, required: true },
+		},
+		Wednesday: {
+			open: { type: Number, required: true },
+			close: { type: Number, required: true },
+		},
+		Thursday: {
+			open: { type: Number, required: true },
+			close: { type: Number, required: true },
+		},
+		Friday: {
+			open: { type: Number, required: true },
+			close: { type: Number, required: true },
+		},
+		Saturday: {
+			open: { type: Number, required: true },
+			close: { type: Number, required: true },
+		},
+		Sunday: {
+			open: { type: Number, required: true },
+			close: { type: Number, required: true },
+		},
+	},
+	{ _id: false },
+);
+
 const businessSchema = new mongoose.Schema({
 	phone: { type: String, required: true, unique: true },
 	isVerified: { type: Boolean, default: true },
@@ -40,7 +74,9 @@ const businessSchema = new mongoose.Schema({
 		expiryDate: { type: Date },
 		isActive: { type: Boolean, default: true },
 	},
-	openingHours: { type: String },
+	openingHours: {
+		type: OpeningHoursSchema,
+	},
 	description: { type: String },
 	theme: { type: String },
 	expoPushToken: { type: String },

@@ -16,6 +16,7 @@ export const createOrder = async (req, res, next) => {
 			runnerInfo,
 			status,
 			discountCode,
+			deliveryOption,
 		} = req.body;
 
 		// Fetch the user's wallet information from the database
@@ -66,11 +67,12 @@ export const createOrder = async (req, res, next) => {
 			runnerInfo, // Optional field for tracking runner information
 			deliveryCode, // Add the delivery code to the order
 			discountCode, // Add the discount code to the order
+			deliveryOption, // Add the delivery option to the order
 		});
 
 		await newOrder.save();
 
-		console.log(newOrder);
+		// console.log(newOrder);
 
 		// Emit an event to the store that a new order has been placed
 		io.emit('newOrder', {

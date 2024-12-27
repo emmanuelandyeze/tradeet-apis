@@ -123,17 +123,17 @@ export const getAvailableRunners = async (req, res) => {
 		// Get campus from query parameters
 		const { campus } = req.query;
 
-		if (!campus) {
-			return res
-				.status(400)
-				.json({ message: 'Campus is required' });
-		}
+		// if (!campus) {
+		// 	return res
+		// 		.status(400)
+		// 		.json({ message: 'Campus is required' });
+		// }
 
 		// Find runners that are active, approved, and in the specified campus
 		const runners = await Runner.find({
 			isActive: true,
 			isApproved: true,
-			campus: campus,
+			// campus: campus,
 		});
 
 		// Respond with the filtered runners

@@ -14,6 +14,7 @@ import runnerRoutes from './routes/runnerRoutes.js';
 import deliveryRequestRoutes from './routes/deliveryRequestRoutes.js';
 import discountRoutes from './routes/discountRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
+import invoiceRoutes from './routes/invoiceRoutes.js';
 import { Server } from 'socket.io';
 
 dotenv.config();
@@ -39,6 +40,7 @@ app.use('/runner', runnerRoutes);
 app.use('/delivery', deliveryRequestRoutes);
 app.use('/discounts', discountRoutes);
 app.use('/category', categoryRoutes);
+app.use('/invoices', invoiceRoutes);
 
 const io = new Server(server, {
 	cors: {

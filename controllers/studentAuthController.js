@@ -7,7 +7,7 @@ import axios from 'axios';
 const sendCode = async (phone, verificationCode) => {
 	const accessToken = process.env.FB_SECRET;
 	const url =
-		'https://graph.facebook.com/v20.0/382339108296299/messages';
+		'https://graph.facebook.com/v21.0/432799279914651/messages';
 
 	try {
 		const response = await axios.post(
@@ -17,13 +17,24 @@ const sendCode = async (phone, verificationCode) => {
 				to: phone,
 				type: 'template',
 				template: {
-					name: 'code',
+					name: 'verification',
 					language: { code: 'en' },
 					components: [
 						{
 							type: 'body',
 							parameters: [
 								{ type: 'text', text: verificationCode },
+							],
+						},
+						{
+							type: 'button',
+							sub_type: 'url',
+							index: '0',
+							parameters: [
+								{
+									type: 'text',
+									text: verificationCode,
+								},
 							],
 						},
 					],
@@ -57,11 +68,11 @@ export const sendVerificationCode = async (req, res) => {
 			});
 		}
 
-		// const verificationCode = Math.floor(
-		// 	1000 + Math.random() * 9000,
-		// ); // 4-digit code
+		const verificationCode = Math.floor(
+			1000 + Math.random() * 9000,
+		); // 4-digit code
 
-		const verificationCode = 1234;
+		// const verificationCode = 1234;
 
 		student = new StudentModel({ phone, verificationCode });
 		await student.save();

@@ -8,7 +8,7 @@ export const findBusinessesByServiceTypeAndCampus = async (
 	req,
 	res,
 ) => {
-	const { serviceType } = req.query;
+	const { serviceType, campus } = req.query;
 
 	try {
 		// Find businesses that match both serviceType and campus
