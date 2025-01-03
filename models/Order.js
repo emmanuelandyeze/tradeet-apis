@@ -39,7 +39,6 @@ const orderSchema = new mongoose.Schema(
 			type: {
 				type: String,
 				enum: ['wallet', 'bank'],
-				required: true,
 			},
 			status: {
 				type: String,
@@ -48,6 +47,17 @@ const orderSchema = new mongoose.Schema(
 			},
 			statusUpdatedAt: { type: Date }, // Timestamp for payment status
 		},
+		payments: [
+			{
+				amount: { type: Number, required: true },
+				date: { type: Date, default: Date.now }, // Date of the payment
+				method: {
+					type: String,
+					enum: ['wallet', 'bank', 'cash'],
+					required: true,
+				},
+			},
+		],
 		userId: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'Student',

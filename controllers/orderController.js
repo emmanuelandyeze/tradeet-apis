@@ -19,10 +19,24 @@ export const createOrder = async (req, res, next) => {
 			deliveryOption,
 		} = req.body;
 
-		// Fetch the user's wallet information from the database
-		const user = await StudentModel.findById(userId);
+		console.log(
+			storeId,
+			customerInfo,
+			items,
+			payment,
+			userId,
+			totalAmount,
+			itemsAmount,
+			runnerInfo,
+			status,
+			discountCode,
+			deliveryOption,
+		);
 
-		let userWalletBalance = user?.wallet || 0; // Assuming there's a `walletBalance` field in the User model
+		// Fetch the user's wallet information from the database
+		// const user = await StudentModel.findById(userId);
+
+		// let userWalletBalance = user?.wallet || 0; // Assuming there's a `walletBalance` field in the User model
 
 		// Fetch the number of existing orders for the store
 		const orderCount = await Order.countDocuments({
@@ -35,18 +49,18 @@ export const createOrder = async (req, res, next) => {
 			.padStart(5, '0');
 
 		// Handle wallet payment
-		if (payment.type === 'wallet') {
-			// Check if the user has enough wallet balance to cover the order amount
-			if (userWalletBalance < totalAmount) {
-				return res.status(400).json({
-					message: 'Insufficient wallet balance',
-				});
-			}
+		// if (payment.type === 'wallet') {
+		// 	// Check if the user has enough wallet balance to cover the order amount
+		// 	if (userWalletBalance < totalAmount) {
+		// 		return res.status(400).json({
+		// 			message: 'Insufficient wallet balance',
+		// 		});
+		// 	}
 
-			// Deduct the total amount from the user's wallet
-			user.wallet -= totalAmount;
-			await user.save(); // Save the updated wallet balance in the database
-		}
+		// 	// Deduct the total amount from the user's wallet
+		// 	user.wallet -= totalAmount;
+		// 	await user.save(); // Save the updated wallet balance in the database
+		// }
 
 		// Generate a random 4-digit delivery code
 		const deliveryCode = Math.floor(
@@ -72,7 +86,7 @@ export const createOrder = async (req, res, next) => {
 
 		await newOrder.save();
 
-		// console.log(newOrder);
+		console.log(newOrder);
 
 		// Emit an event to the store that a new order has been placed
 		io.emit('newOrder', {
@@ -579,5 +593,72 @@ export const updatePayment = async (req, res) => {
 			message: 'Error updating payment status',
 			error: error.message,
 		});
+	}
+};
+
+// Add a payment
+export const addPayment = async (req, res) => {
+	try {
+		const { orderId, amount, method } = req.body;
+
+		// Validate input
+		if (!orderId || !amount || !method) {
+			return res
+				.status(400)
+				.json({ message: 'All fields are required.' });
+		}
+
+		// Find the order
+		const order = await Order.findById(orderId);
+		if (!order) {
+			return res
+				.status(404)
+				.json({ message: 'Order not found.' });
+		}
+
+		// Add payment record
+		const payment = { amount, method, date: new Date() };
+		order.payments.push(payment);
+
+		// Update payment status if fully paid
+		const totalPaid = order.payments.reduce(
+			(sum, p) => sum + p.amount,
+			0,
+		);
+
+		if (totalPaid >= order.totalAmount) {
+			order.payment.status = 'completed';
+			order.payment.statusUpdatedAt = new Date();
+		}
+
+		await order.save();
+
+		res.status(200).json({
+			message: 'Payment added successfully.',
+			order,
+		});
+	} catch (error) {
+		res.status(500).json({ message: error.message });
+	}
+};
+
+// Get payment history
+export const getPaymentHistory = async (req, res) => {
+	try {
+		const { orderId } = req.params;
+
+		// Find the order
+		const order = await Order.findById(orderId).select(
+			'payments',
+		);
+		if (!order) {
+			return res
+				.status(404)
+				.json({ message: 'Order not found.' });
+		}
+
+		res.status(200).json({ payments: order.payments });
+	} catch (error) {
+		res.status(500).json({ message: error.message });
 	}
 };

@@ -15,6 +15,8 @@ import {
 	completeOrderByVendor,
 	addRunner,
 	updatePayment,
+	addPayment,
+	getPaymentHistory,
 } from '../controllers/orderController.js';
 
 const router = Router();
@@ -43,5 +45,9 @@ router.put('/v/:orderId/cancel', cancelOrderByVendor); // Cancel an order
 router.put('/v/:orderId/complete', completeOrderByVendor); // Cancel an order
 
 router.put('/orders/:orderId/add-runner', addRunner);
+
+router.post('/add-payment', addPayment); // Add a payment
+router.get('/:orderId/payments', getPaymentHistory); // Get payment history
+
 
 export default router; 
