@@ -82,6 +82,7 @@ export const createOrder = async (req, res, next) => {
 			deliveryCode, // Add the delivery code to the order
 			discountCode, // Add the discount code to the order
 			deliveryOption, // Add the delivery option to the order
+			balance: totalAmount,
 		});
 
 		await newOrder.save();
@@ -616,9 +617,15 @@ export const addPayment = async (req, res) => {
 				.json({ message: 'Order not found.' });
 		}
 
+		console.log(order);
+
 		// Add payment record
 		const payment = { amount, method, date: new Date() };
 		order.payments.push(payment);
+
+		order.amountPaid += amount;
+
+		order.balance -= amount;
 
 		// Update payment status if fully paid
 		const totalPaid = order.payments.reduce(
@@ -628,6 +635,9 @@ export const addPayment = async (req, res) => {
 
 		if (totalPaid >= order.totalAmount) {
 			order.payment.status = 'completed';
+			order.payment.statusUpdatedAt = new Date();
+		} else {
+			order.payment.status = 'partial';
 			order.payment.statusUpdatedAt = new Date();
 		}
 
