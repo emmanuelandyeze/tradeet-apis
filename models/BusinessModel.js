@@ -12,32 +12,32 @@ const paymentInfoSchema = new mongoose.Schema(
 const OpeningHoursSchema = new mongoose.Schema(
 	{
 		Monday: {
-			open: { type: Number, required: true },
-			close: { type: Number, required: true },
+			open: { type: Number },
+			close: { type: Number },
 		},
 		Tuesday: {
-			open: { type: Number, required: true },
-			close: { type: Number, required: true },
+			open: { type: Number },
+			close: { type: Number },
 		},
 		Wednesday: {
-			open: { type: Number, required: true },
-			close: { type: Number, required: true },
+			open: { type: Number },
+			close: { type: Number },
 		},
 		Thursday: {
-			open: { type: Number, required: true },
-			close: { type: Number, required: true },
+			open: { type: Number },
+			close: { type: Number },
 		},
 		Friday: {
-			open: { type: Number, required: true },
-			close: { type: Number, required: true },
+			open: { type: Number },
+			close: { type: Number },
 		},
 		Saturday: {
-			open: { type: Number, required: true },
-			close: { type: Number, required: true },
+			open: { type: Number },
+			close: { type: Number },
 		},
 		Sunday: {
-			open: { type: Number, required: true },
-			close: { type: Number, required: true },
+			open: { type: Number },
+			close: { type: Number },
 		},
 	},
 	{ _id: false },
@@ -84,11 +84,9 @@ const businessSchema = new mongoose.Schema({
 		type: {
 			type: String,
 			enum: ['Point'], // GeoJSON type must be "Point"
-			required: true,
 		},
 		coordinates: {
 			type: [Number], // [longitude, latitude]
-			required: true,
 		},
 	},
 });

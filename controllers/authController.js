@@ -9,7 +9,7 @@ const sendCode = async (whatsapp, verificationCode) => {
 		const sendMessage = async () => {
 			const accessToken = process.env.FB_SECRET;
 			const url =
-				'https://graph.facebook.com/v20.0/382339108296299/messages';
+				'https://graph.facebook.com/v21.0/432799279914651/messages';
 
 			try {
 				const response = await axios.post(
@@ -19,13 +19,24 @@ const sendCode = async (whatsapp, verificationCode) => {
 						to: whatsapp, // Ensure the correct phone number
 						type: 'template',
 						template: {
-							name: 'code',
+							name: 'verification',
 							language: {
 								code: 'en',
 							},
 							components: [
 								{
 									type: 'body',
+									parameters: [
+										{
+											type: 'text',
+											text: verificationCode,
+										},
+									],
+								},
+								{
+									type: 'button',
+									sub_type: 'url',
+									index: '0',
 									parameters: [
 										{
 											type: 'text',
@@ -81,38 +92,45 @@ export const sendVerificationCode = async (req, res) => {
 	const { phone } = req.body;
 
 	try {
-		// Check if the phone number already exists
+		// Check if the phone number already exists in the database
 		let business = await BusinessModel.findOne({ phone });
+
+		// Generate verification code (e.g., 4 digits)
+		const verificationCode = Math.floor(
+			1000 + Math.random() * 9000,
+		);
+
 		if (business) {
-			return res.status(400).json({
-				message: 'Phone number already registered',
+			// If the business already exists, update the verification code
+			business.verificationCode = verificationCode;
+			await business.save();
+
+			// Resend the verification code
+			await sendCode(phone, verificationCode);
+
+			return res.status(200).json({
+				message: 'Verification code sent via WhatsApp',
 			});
 		}
 
-		// Generate verification code (e.g., 4 digits)
-		// const verificationCode = Math.floor(
-		// 	1000 + Math.random() * 9000,
-		// );
-
-		const verificationCode = 1234;
-
-		// Create business with just phone and verificationCode
+		// If the business doesn't exist, create a new one with just phone and verificationCode
 		business = new BusinessModel({
 			phone,
 			verificationCode,
 		});
 		await business.save();
 
-		// Send the verification code using WhatsApp Business API
+		// Send the verification code
 		await sendCode(phone, verificationCode);
 
 		res.status(200).json({
 			message: 'Verification code sent via WhatsApp',
 		});
 	} catch (error) {
-		res
-			.status(500)
-			.json({ message: 'Server error', error });
+		res.status(500).json({
+			message: 'Server error',
+			error,
+		});
 	}
 };
 
@@ -154,6 +172,8 @@ export const completeProfile = async (req, res) => {
 		campus,
 		isVendor,
 		serviceType,
+		email,
+		description,
 	} = req.body;
 
 	try {
@@ -175,7 +195,9 @@ export const completeProfile = async (req, res) => {
 		// Update business details
 		business.name = name;
 		business.logoUrl = logoUrl;
+		business.email = email;
 		business.address = address;
+		business.description = description;
 		business.password = hashedPassword;
 		business.isVendor = isVendor;
 		if (isVendor) {
