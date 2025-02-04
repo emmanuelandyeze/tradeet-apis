@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import BusinessModel from '../models/BusinessModel.js';
 import axios from 'axios';
+import sendWhatsAppMessage from '../services/whatsappService.js';
 
 const sendCode = async (whatsapp, verificationCode) => {
 	try {
@@ -84,6 +85,85 @@ const sendCode = async (whatsapp, verificationCode) => {
 			error,
 		);
 		throw new Error('Failed to send verification code.');
+	}
+};
+
+const generateOtp = () =>
+	Math.floor(1000 + Math.random() * 9000).toString();
+
+// Request password reset via WhatsApp
+export const forgotPassword = async (req, res) => {
+	try {
+		const { phone } = req.body;
+		const user = await BusinessModel.findOne({ phone });
+
+		if (!user)
+			return res
+				.status(404)
+				.json({ message: 'User not found' });
+
+		const otp = generateOtp();
+		user.resetOtp = otp;
+		user.resetOtpExpires = Date.now() + 10 * 60 * 1000; // Expires in 10 mins
+		await user.save();
+
+		const message = otp;
+		await sendWhatsAppMessage(phone, message);
+
+		res.json({ message: 'OTP sent via WhatsApp' });
+	} catch (error) {
+		res.status(500).json({ message: error.message });
+	}
+};
+
+//Verify OTP
+export const verifyOtp = async (req, res) => {
+	try {
+		const { phone, otp } = req.body;
+		const user = await BusinessModel.findOne({ phone });
+
+		if (
+			!user ||
+			user.resetOtp !== otp ||
+			user.resetOtpExpires < Date.now()
+		) {
+			return res
+				.status(400)
+				.json({ message: 'Invalid or expired OTP' });
+		}
+
+		res.json({
+			message: 'OTP verified. Proceed to reset password.',
+		});
+	} catch (error) {
+		res.status(500).json({ message: error.message });
+	}
+};
+
+// Reset password
+export const resetPassword = async (req, res) => {
+	try {
+		const { phone, otp, newPassword } = req.body;
+		const user = await BusinessModel.findOne({ phone });
+
+		if (
+			!user ||
+			user.resetOtp !== otp ||
+			user.resetOtpExpires < Date.now()
+		) {
+			return res
+				.status(400)
+				.json({ message: 'Invalid or expired OTP' });
+		}
+
+		user.password = await bcrypt.hash(newPassword, 10);
+		user.resetOtp = undefined;
+		user.resetOtpExpires = undefined;
+		await user.save();
+
+		res.json({ message: 'Password reset successful' });
+	} catch (error) {
+		res.status(500).json({ message: error.message });
 	}
 };
 

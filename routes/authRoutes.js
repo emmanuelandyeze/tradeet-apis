@@ -6,6 +6,9 @@ import {
 	login,
 	getBusinessInfo,
 	completeCampusProfile,
+	forgotPassword,
+	resetPassword,
+	verifyOtp,
 } from '../controllers/authController.js';
 import { authenticateBusiness } from '../middlewares/authMiddleware.js';
 
@@ -23,6 +26,10 @@ router.post(
 	'/complete-campus-profile',
 	completeCampusProfile,
 );
+
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-otp', verifyOtp);
+router.post('/reset-password', resetPassword);
 
 // Login
 router.post('/login', login);

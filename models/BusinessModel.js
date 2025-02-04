@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
 
 const paymentInfoSchema = new mongoose.Schema(
 	{
@@ -89,8 +90,18 @@ const businessSchema = new mongoose.Schema({
 			type: [Number], // [longitude, latitude]
 		},
 	},
+	resetOtp: { type: String },
+	resetOtpExpires: { type: Date },
 });
 
 businessSchema.index({ location: '2dsphere' }); // Add geospatial index
 
 export default mongoose.model('Business', businessSchema);
+
+// Hash password before saving
+businessSchema.pre('save', async function (next) {
+	if (!this.isModified('password')) return next();
+	const salt = await bcrypt.genSalt(10);
+	this.password = bcrypt.hash(this.password, salt);
+	next();
+});
