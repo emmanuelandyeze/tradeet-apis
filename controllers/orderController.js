@@ -620,20 +620,24 @@ export const addPayment = async (req, res) => {
 		console.log(order);
 
 		// Add payment record
-		const payment = { amount, method, date: new Date() };
+		const payment = {
+			amount: Number(amount),
+			method,
+			date: new Date(),
+		};
 		order.payments.push(payment);
 
-		order.amountPaid += amount;
-
-		order.balance -= amount;
+		order.amountPaid =
+			Number(order.amountPaid) + Number(amount);
+		order.balance = Number(order.balance) - Number(amount);
 
 		// Update payment status if fully paid
 		const totalPaid = order.payments.reduce(
-			(sum, p) => sum + p.amount,
+			(sum, p) => sum + Number(p.amount),
 			0,
 		);
 
-		if (totalPaid >= order.totalAmount) {
+		if (totalPaid >= Number(order.totalAmount)) {
 			order.payment.status = 'completed';
 			order.payment.statusUpdatedAt = new Date();
 		} else {
@@ -651,6 +655,7 @@ export const addPayment = async (req, res) => {
 		res.status(500).json({ message: error.message });
 	}
 };
+
 
 // Get payment history
 export const getPaymentHistory = async (req, res) => {
