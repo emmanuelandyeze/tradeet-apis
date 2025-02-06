@@ -2,6 +2,7 @@ import BusinessModel from '../models/BusinessModel.js';
 import Business from '../models/BusinessModel.js'; // Import the Business model
 import { Product } from '../models/Product.js'; // Import the Product model
 import Order from '../models/Order.js';
+import { Category } from '../models/Category.js';
 
 // Controller to find businesses by service type and campus
 export const findBusinessesByServiceTypeAndCampus = async (
@@ -114,7 +115,6 @@ export const findBusinessByStoreLink = async (req, res) => {
 
 export const findBusinessProducts = async (req, res) => {
 	const { businessId } = req.params;
-	// const {  } = req.body;
 
 	try {
 		// Find the business by the provided businessId
@@ -132,9 +132,9 @@ export const findBusinessProducts = async (req, res) => {
 		// Find all products that belong to the specific business
 		const products = await Product.find({
 			storeId: businessId,
-		});
+		}).populate('category'); // Populate the category field with category details
 
-		// Return the business details along with the associated products
+		// Return the business details along with the associated products and category details
 		res.status(200).json({
 			success: true,
 			products: products,
@@ -147,6 +147,8 @@ export const findBusinessProducts = async (req, res) => {
 		});
 	}
 };
+
+
 
 // Controller to get business information by business ID
 export const findBusinessById = async (req, res) => {
