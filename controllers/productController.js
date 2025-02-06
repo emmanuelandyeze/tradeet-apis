@@ -69,7 +69,6 @@ export const createProduct = async (req, res) => {
 		category, // Category ID
 		storeId,
 	} = req.body;
-
 	try {
 		// Validate that the category belongs to the store
 		const existingCategory = await Category.findOne({
