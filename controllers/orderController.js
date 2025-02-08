@@ -1,7 +1,7 @@
+import BusinessModel from '../models/BusinessModel.js';
 import Order from '../models/Order.js';
-import Runner from '../models/Runner.js';
-import StudentModel from '../models/StudentModel.js';
 import { io } from '../server.js';
+import axios from 'axios';
 
 export const createOrder = async (req, res, next) => {
 	try {
@@ -19,22 +19,8 @@ export const createOrder = async (req, res, next) => {
 			deliveryOption,
 		} = req.body;
 
-		console.log(
-			storeId,
-			customerInfo,
-			items,
-			payment,
-			userId,
-			totalAmount,
-			itemsAmount,
-			runnerInfo,
-			status,
-			discountCode,
-			deliveryOption,
-		);
-
 		// Fetch the user's wallet information from the database
-		// const user = await StudentModel.findById(userId);
+		const store = await BusinessModel.findById(storeId);
 
 		// let userWalletBalance = user?.wallet || 0; // Assuming there's a `walletBalance` field in the User model
 
@@ -68,7 +54,7 @@ export const createOrder = async (req, res, next) => {
 		);
 
 		// Create the new order
-		const newOrder = new Order({
+		const order = new Order({
 			storeId,
 			customerInfo,
 			items,
@@ -77,28 +63,156 @@ export const createOrder = async (req, res, next) => {
 			totalAmount,
 			itemsAmount,
 			orderNumber,
-			status, // Default order status
-			runnerInfo, // Optional field for tracking runner information
-			deliveryCode, // Add the delivery code to the order
-			discountCode, // Add the discount code to the order
-			deliveryOption, // Add the delivery option to the order
+			status,
+			runnerInfo,
+			deliveryCode,
+			discountCode,
+			deliveryOption,
 			balance: totalAmount,
 		});
 
-		await newOrder.save();
+		await order.save();
 
-		console.log(newOrder);
+		const formatCartItems = (order) => {
+			const cartItems = order?.items
+				?.map((item) => {
+					const itemPrice = item?.variant
+						? `${
+								item?.variant?.name
+						  } - ₦${new Intl.NumberFormat('en-US').format(
+								item?.variant?.price,
+						  )}`
+						: `₦${new Intl.NumberFormat('en-US').format(
+								item?.price,
+						  )}`;
 
-		// Emit an event to the store that a new order has been placed
-		io.emit('newOrder', {
-			message: 'New order placed',
-			order: newOrder,
-		});
+					// Check for additions within the item and format them
+					const additions =
+						item?.addOns
+							?.map((addition) => {
+								return `+ ${
+									addition.name
+								} - ₦${new Intl.NumberFormat(
+									'en-US',
+								).format(addition.price)}`;
+							})
+							.join(' ') || '';
+
+					return `*${item.quantity}x* ${item.name} - ${itemPrice} ${additions}`;
+				})
+				.join(' / '); // Use '/' to separate items
+
+			return cartItems;
+		};
+
+		// Send WhatsApp message
+		const sendMessage = async () => {
+			const accessToken = process.env.FB_SECRET;
+			const url =
+				'https://graph.facebook.com/v21.0/432799279914651/messages';
+
+			try {
+				const response = await axios.post(
+					url,
+					{
+						messaging_product: 'whatsapp',
+						to: store?.phone,
+						type: 'template',
+						template: {
+							name: 'new_order',
+							language: {
+								code: 'en_US',
+							},
+							components: [
+								{
+									type: 'header',
+									parameters: [
+										{
+											type: 'text',
+											text: 'New',
+										},
+									],
+								},
+								{
+									type: 'body',
+									parameters: [
+										{
+											type: 'text',
+											text: formatCartItems(order),
+										},
+										{
+											type: 'text',
+											text: `₦${order.totalAmount.toLocaleString()}.00 (Qty: ${
+												order.items.length
+											})`,
+										},
+										{
+											type: 'text',
+											text: `₦${order.totalAmount.toLocaleString()}.00`,
+										},
+										{
+											type: 'text',
+											text: `${order.customerInfo.name} / ${order.customerInfo.contact}`,
+										},
+										{
+											type: 'text',
+											text: `${
+												order?.customerInfo.pickUp
+													? 'Self pickup'
+													: 'Delivery'
+											}`,
+										},
+										{
+											type: 'text',
+											text: `https://tradeet.ng/store/${store?.storeLink}/orders/${order._id}`,
+										},
+										{
+											type: 'text',
+											text: `${order.customerInfo.contact}`,
+										},
+									],
+								},
+								{
+									type: 'button',
+									sub_type: 'quick_reply', // Use 'quick_reply'
+									index: '0',
+									parameters: [
+										{
+											type: 'payload',
+											payload: `CONFIRM_PAYMENT_${order._id}`, // Unique payload for backend to identify action
+										},
+									],
+								},
+							],
+						},
+					},
+					{
+						headers: {
+							Authorization: `Bearer ${accessToken}`,
+							'Content-Type': 'application/json',
+						},
+					},
+				);
+				console.log(
+					'WhatsApp message sent successfully:',
+					response.data,
+				);
+			} catch (error) {
+				console.error(
+					'Error sending WhatsApp message:',
+					error.response
+						? error.response.data
+						: error.message,
+				);
+			}
+		};
+
+		sendMessage();
 
 		res.status(201).json({
 			message: 'Order placed successfully',
-			order: newOrder,
-			orderId: newOrder._id,
+			order: order,
+			orderId: order._id,
 		});
 	} catch (error) {
 		res.status(500).json({
@@ -655,7 +769,6 @@ export const addPayment = async (req, res) => {
 		res.status(500).json({ message: error.message });
 	}
 };
-
 
 // Get payment history
 export const getPaymentHistory = async (req, res) => {
