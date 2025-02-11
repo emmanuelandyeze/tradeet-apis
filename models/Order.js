@@ -59,7 +59,7 @@ const orderSchema = new mongoose.Schema(
 			},
 		],
 		amountPaid: { type: Number, default: 0 },
-		balance: { type: Number },
+		balance: { type: Number, default: 0 },
 		userId: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'Student',

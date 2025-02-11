@@ -37,24 +37,17 @@ export const createOrder = async (req, res, next) => {
 			.toString()
 			.padStart(5, '0');
 
-		// Handle wallet payment
-		// if (payment.type === 'wallet') {
-		// 	// Check if the user has enough wallet balance to cover the order amount
-		// 	if (userWalletBalance < totalAmount) {
-		// 		return res.status(400).json({
-		// 			message: 'Insufficient wallet balance',
-		// 		});
-		// 	}
-
-		// 	// Deduct the total amount from the user's wallet
-		// 	user.wallet -= totalAmount;
-		// 	await user.save(); // Save the updated wallet balance in the database
-		// }
-
 		// Generate a random 4-digit delivery code
 		const deliveryCode = Math.floor(
 			1000 + Math.random() * 9000,
 		);
+
+		const safeNumber = (value) => Number(value) || 0;
+
+		const balance =
+			safeNumber(itemsAmount) +
+			safeNumber(deliveryFee) -
+			safeNumber(discountAmount);
 
 		// Create the new order
 		const order = new Order({
@@ -71,7 +64,7 @@ export const createOrder = async (req, res, next) => {
 			deliveryCode,
 			discountCode,
 			deliveryOption,
-			balance: itemsAmount + deliveryFee - discountAmount,
+			balance,
 			deliveryFee,
 			serviceFee,
 			discountAmount,
