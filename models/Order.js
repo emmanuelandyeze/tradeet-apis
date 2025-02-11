@@ -69,7 +69,10 @@ const orderSchema = new mongoose.Schema(
 		itemsAmount: { type: Number }, // Amount for store
 		orderNumber: { type: String }, // Order number
 		deliveryCode: { type: String }, // Delivery code
-		deliveryOption: { type: String }, // Delivery option
+		deliveryOption: { type: String }, // Delivery option,
+		deliveryFee: { type: Number },
+		serviceFee: { type: Number },
+		discountAmount: { type: Number },
 	},
 	{
 		timestamps: true, // Automatically adds createdAt and updatedAt fields

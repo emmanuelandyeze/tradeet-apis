@@ -21,7 +21,9 @@ export const getProducts = async (req, res) => {
 export const getProductById = async (req, res) => {
 	const { id } = req.params;
 	try {
-		const product = await Product.findById(id);
+		const product = await Product.findById(id).populate(
+			'category',
+		);
 		if (!product) {
 			return res
 				.status(404)

@@ -17,6 +17,9 @@ export const createOrder = async (req, res, next) => {
 			status,
 			discountCode,
 			deliveryOption,
+			deliveryFee,
+			serviceFee,
+			discountAmount,
 		} = req.body;
 
 		// Fetch the user's wallet information from the database
@@ -68,7 +71,10 @@ export const createOrder = async (req, res, next) => {
 			deliveryCode,
 			discountCode,
 			deliveryOption,
-			balance: totalAmount,
+			balance: itemsAmount + deliveryFee - discountAmount,
+			deliveryFee,
+			serviceFee,
+			discountAmount,
 		});
 
 		await order.save();
@@ -83,7 +89,7 @@ export const createOrder = async (req, res, next) => {
 								item?.variant?.price,
 						  )}`
 						: `₦${new Intl.NumberFormat('en-US').format(
-								item?.price,
+								item?.basePrice,
 						  )}`;
 
 					// Check for additions within the item and format them
