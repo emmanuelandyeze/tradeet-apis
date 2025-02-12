@@ -409,6 +409,7 @@ export const updateBusinessInfo = async (req, res) => {
 		isVendor,
 		latitude,
 		longitude, // New fields for location coordinates
+		storeBanner,
 	} = req.body;
 
 	try {
@@ -425,6 +426,7 @@ export const updateBusinessInfo = async (req, res) => {
 		// Update business fields if they are provided in the request
 		if (name) business.name = name;
 		if (logoUrl) business.logoUrl = logoUrl;
+		if (storeBanner) business.storeBanner = storeBanner;
 		if (address) business.address = address;
 		if (serviceType) business.serviceType = serviceType;
 		if (campus) business.campus = campus;

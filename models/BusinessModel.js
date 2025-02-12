@@ -50,6 +50,7 @@ const businessSchema = new mongoose.Schema({
 	verificationCode: String, // store the code temporarily
 	name: { type: String },
 	logoUrl: { type: String },
+	storeBanner: { type: String },
 	address: { type: String },
 	serviceType: { type: String },
 	campus: { type: String }, // applicable for Tradeet Campus users
