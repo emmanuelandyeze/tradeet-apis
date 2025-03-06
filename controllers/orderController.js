@@ -2,6 +2,51 @@ import BusinessModel from '../models/BusinessModel.js';
 import Order from '../models/Order.js';
 import { io } from '../server.js';
 import axios from 'axios';
+import { Expo } from 'expo-server-sdk';
+
+// Create a new Expo SDK client
+const expo = new Expo();
+
+// Array to store push tickets
+const pushTickets = [];
+
+async function sendPushNotification(
+	pushToken,
+	message,
+	title,
+) {
+	// Check if the push token is valid
+	if (!Expo.isExpoPushToken(pushToken)) {
+		console.error(
+			`Push token ${pushToken} is not a valid Expo push token`,
+		);
+		return;
+	}
+
+	// Construct the notification message
+	const notificationMessage = {
+		to: pushToken,
+		sound: 'default',
+		title: title,
+		body: message,
+		data: { withSome: 'data' },
+	};
+
+	try {
+		// Send the notification
+		const pushTicketChunk =
+			await expo.sendPushNotificationsAsync([
+				notificationMessage,
+			]);
+		pushTickets.push(...pushTicketChunk);
+		console.log(
+			'Notification sent successfully',
+			pushTicketChunk,
+		);
+	} catch (error) {
+		console.error('Error sending notification:', error);
+	}
+}
 
 export const createOrder = async (req, res, next) => {
 	try {
@@ -72,6 +117,16 @@ export const createOrder = async (req, res, next) => {
 
 		await order.save();
 
+		const userPushToken = store?.expoPushToken; // Replace with the actual push token
+		const notificationMessage = `You have a new order on ${store?.name} `;
+		const title = 'New Order';
+
+		sendPushNotification(
+			userPushToken,
+			notificationMessage,
+			title,
+		);
+
 		const formatCartItems = (order) => {
 			const cartItems = order?.items
 				?.map((item) => {
@@ -103,6 +158,9 @@ export const createOrder = async (req, res, next) => {
 
 			return cartItems;
 		};
+
+		console.log('order: ', order);
+		console.log('formattedOrder: ', formatCartItems(order));
 
 		// Send WhatsApp message
 		const sendMessage = async () => {
@@ -710,10 +768,21 @@ export const updatePayment = async (req, res) => {
 	}
 };
 
+// Helper function to get bank code from bank name
+const getBankCode = async (bankName) => {
+	const banks = await axios.get(
+		'https://api.paystack.co/bank',
+	);
+	const bank = banks.data.data.find(
+		(bank) => bank.name === bankName,
+	);
+	return bank ? bank.code : null;
+};
+
 // Add a payment
 export const addPayment = async (req, res) => {
 	try {
-		const { orderId, amount, method } = req.body;
+		const { storeId, orderId, amount, method } = req.body;
 
 		// Validate input
 		if (!orderId || !amount || !method) {
@@ -722,6 +791,9 @@ export const addPayment = async (req, res) => {
 				.json({ message: 'All fields are required.' });
 		}
 
+		// Fetch the store
+		const store = await BusinessModel.findById(storeId);
+
 		// Find the order
 		const order = await Order.findById(orderId);
 		if (!order) {
@@ -729,8 +801,6 @@ export const addPayment = async (req, res) => {
 				.status(404)
 				.json({ message: 'Order not found.' });
 		}
-
-		console.log(order);
 
 		// Add payment record
 		const payment = {
@@ -756,6 +826,111 @@ export const addPayment = async (req, res) => {
 		} else {
 			order.payment.status = 'partial';
 			order.payment.statusUpdatedAt = new Date();
+		}
+
+		if (store.plan.name !== 'Pro') {
+			console.log(
+				'Business not eligible for automatic transfers. Plan:',
+				store.plan.name,
+			);
+		} else {
+			console.log(
+				'Processing Paystack transfer for Pro plan business.',
+			);
+
+			// Step 1: Retrieve user bank details
+			const { accountName, accountNumber, bankName } =
+				store?.paymentInfo[0];
+			const bankCode = await getBankCode(bankName); // Assume a function to get bank code
+			console.log('Retrieved bank code:', bankCode);
+
+			// Define the transfer fee based on the amount
+			const transferFee =
+				order.itemsAmount <= 5000
+					? 10
+					: order.itemsAmount <= 50000
+					? 25
+					: 50; // Fee structure
+
+			const totalAmountInKobo =
+				(order.itemsAmount + order.deliveryFee) * 100; // Convert to kobo
+			const feeInKobo = transferFee * 100; // Convert fee to kobo
+			const amountToTransfer = totalAmountInKobo; // Deduct fee
+
+			console.log(
+				'Amount to be transferred (in kobo):',
+				amountToTransfer / 100,
+			); // Convert to naira for display
+
+			// Step 2: Create transfer recipient
+			try {
+				const recipientResponse = await axios.post(
+					'https://api.paystack.co/transferrecipient',
+					{
+						type: 'nuban',
+						name: accountName,
+						account_number: accountNumber,
+						bank_code: bankCode,
+						currency: 'NGN',
+					},
+					{
+						headers: {
+							Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
+							'Content-Type': 'application/json',
+						},
+					},
+				);
+
+				const recipientCode =
+					recipientResponse.data.data.recipient_code;
+				console.log(
+					'Recipient code created:',
+					recipientCode,
+				);
+
+				// Step 3: Initiate the transfer
+				const transferResponse = await axios.post(
+					'https://api.paystack.co/transfer',
+					{
+						source: 'balance',
+						amount: amountToTransfer, // Use the adjusted amount
+						recipient: recipientCode,
+						reason: `Payment for Order ${order.orderNumber}`,
+					},
+					{
+						headers: {
+							Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
+							'Content-Type': 'application/json',
+						},
+					},
+				);
+
+				// Log the transfer response
+				console.log(
+					'Transfer successful:',
+					transferResponse.data,
+				);
+				const userPushToken = store?.expoPushToken; // Replace with the actual push token
+				const notificationMessage = `You just received, ₦${
+					order?.itemsAmount + order?.deliveryFee
+				} for order #${order?.orderNumber} to your ${
+					store?.paymentInfo[0]?.bankName
+				} account. Please confirm with your bank.`;
+				const title = '💰 New Payment';
+
+				sendPushNotification(
+					userPushToken,
+					notificationMessage,
+					title,
+				);
+			} catch (error) {
+				console.error(
+					'Error during transfer process:',
+					error.response
+						? error.response.data
+						: error.message,
+				);
+			}
 		}
 
 		await order.save();
