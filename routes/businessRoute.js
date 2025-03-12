@@ -12,6 +12,7 @@ import {
 	markOrderAsDelivered,
 	findBusinessByStoreLink,
 	findBusinessProducts,
+	getWalletBalance,
 } from '../controllers/businessController.js';
 
 const router = express.Router();
@@ -37,5 +38,7 @@ router.get(
 );
 router.put('/:businessId', updateBusinessInfo);
 router.put('/:businessId/expo-token', updateExpoToken);
+
+router.get('/wallet/:storeId', getWalletBalance);
 
 export default router; 

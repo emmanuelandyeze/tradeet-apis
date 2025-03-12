@@ -954,7 +954,8 @@ export const processTransfer = async (req, res) => {
 
 		// Paystack transfer fee logic (Vendor bears this fee)
 		const transferFee = amount <= 5000 ? 10 : 25;
-		const totalDeduction = amount + transferFee; // Total amount to deduct from wallet
+		const totalDeduction =
+			Number(amount) + Number(transferFee); // Total amount to deduct from wallet
 
 		// Ensure wallet has enough balance
 		if (wallet.balance < totalDeduction) {
@@ -1038,7 +1039,7 @@ export const processTransfer = async (req, res) => {
 		await transferData.save();
 
 		const userPushToken = store?.expoPushToken; // Replace with the actual push token
-		const notificationMessage = `You have made a transfer of ₦${totalDeduction} to ${accountName}. `;
+		const notificationMessage = `You have made a transfer of ₦${amount} to ${accountName}. `;
 		const title = 'Successful Transfer';
 
 		sendPushNotification(

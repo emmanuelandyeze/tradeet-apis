@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const TransferSchema = new mongoose.Schema({
 	storeId: {
 		type: mongoose.Schema.Types.ObjectId,
-		ref: 'Store',
+		ref: 'Business',
 		required: true,
 	},
 	amount: { type: Number, required: true }, // Amount vendor receives (after fee)

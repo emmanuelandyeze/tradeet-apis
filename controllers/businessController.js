@@ -3,6 +3,7 @@ import Business from '../models/BusinessModel.js'; // Import the Business model
 import { Product } from '../models/Product.js'; // Import the Product model
 import Order from '../models/Order.js';
 import { Category } from '../models/Category.js';
+import Wallet from '../models/Wallet.js';
 
 // Controller to find businesses by service type and campus
 export const findBusinessesByServiceTypeAndCampus = async (
@@ -147,8 +148,6 @@ export const findBusinessProducts = async (req, res) => {
 		});
 	}
 };
-
-
 
 // Controller to get business information by business ID
 export const findBusinessById = async (req, res) => {
@@ -387,7 +386,6 @@ export const getSubscriptionInfo = async (req, res) => {
 	}
 };
 
-
 // Controller to update business information
 export const updateBusinessInfo = async (req, res) => {
 	const { businessId } = req.params;
@@ -480,7 +478,6 @@ export const updateBusinessInfo = async (req, res) => {
 	}
 };
 
-
 export const updateExpoToken = async (req, res) => {
 	try {
 		const { expoPushToken } = req.body;
@@ -548,6 +545,32 @@ export const markOrderAsDelivered = async (req, res) => {
 		console.error(error);
 		res.status(500).json({
 			message: 'Error marking order as delivered',
+			error: error.message,
+		});
+	}
+};
+
+export const getWalletBalance = async (req, res) => {
+	try {
+		const { storeId } = req.params;
+
+		// Fetch the wallet for the vendor
+		const wallet = await Wallet.findOne({ storeId });
+
+		if (!wallet) {
+			return res.status(404).json({
+				message: 'Wallet not found for the specified store',
+			});
+		}
+
+		res.status(200).json({
+			success: true,
+			walletBalance: wallet.balance,
+			transactions: wallet.transactions, // Include transactions if needed
+		});
+	} catch (error) {
+		res.status(500).json({
+			message: 'Error fetching wallet balance',
 			error: error.message,
 		});
 	}

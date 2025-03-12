@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const WalletSchema = new mongoose.Schema({
 	storeId: {
 		type: mongoose.Schema.Types.ObjectId,
-		ref: 'BusinessModel',
+		ref: 'Business',
 		required: true,
 	},
 	balance: { type: Number, default: 0 },
