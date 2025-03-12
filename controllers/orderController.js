@@ -1,5 +1,7 @@
 import BusinessModel from '../models/BusinessModel.js';
+import Wallet from '../models/Wallet.js';
 import Order from '../models/Order.js';
+import Transfer from '../models/Transfer.js';
 import { io } from '../server.js';
 import axios from 'axios';
 import { Expo } from 'expo-server-sdk';
@@ -791,8 +793,13 @@ export const addPayment = async (req, res) => {
 				.json({ message: 'All fields are required.' });
 		}
 
-		// Fetch the store
+		// Fetch the store (vendor)
 		const store = await BusinessModel.findById(storeId);
+		if (!store) {
+			return res
+				.status(404)
+				.json({ message: 'Store not found.' });
+		}
 
 		// Find the order
 		const order = await Order.findById(orderId);
@@ -802,142 +809,83 @@ export const addPayment = async (req, res) => {
 				.json({ message: 'Order not found.' });
 		}
 
-		// Add payment record
+		// Add payment record to order
 		const payment = {
 			amount: Number(amount),
 			method,
 			date: new Date(),
 		};
 		order.payments.push(payment);
-
 		order.amountPaid =
 			Number(order.amountPaid) + Number(amount);
 		order.balance = Number(order.balance) - Number(amount);
 
-		// Update payment status if fully paid
+		// Update payment status
 		const totalPaid = order.payments.reduce(
 			(sum, p) => sum + Number(p.amount),
 			0,
 		);
-
 		if (totalPaid >= Number(order.totalAmount)) {
 			order.payment.status = 'completed';
-			order.payment.statusUpdatedAt = new Date();
 		} else {
 			order.payment.status = 'partial';
-			order.payment.statusUpdatedAt = new Date();
+		}
+		order.payment.statusUpdatedAt = new Date();
+
+		// Calculate vendor's earnings from this order
+		const itemsAmount = order.itemsAmount || 0;
+		const deliveryFee = order.deliveryFee || 0;
+		const discountAmount = order.discountAmount || 0;
+		const serviceFee = (itemsAmount * 10) / 100; // Assuming 10% platform fee
+
+		const vendorEarnings =
+			itemsAmount + deliveryFee - discountAmount;
+		const vendorReceivable = Math.min(
+			vendorEarnings,
+			order.amountPaid,
+		);
+
+		// Update vendor's wallet
+		let wallet = await Wallet.findOne({ storeId });
+
+		if (!wallet) {
+			// Create a new wallet if not exists
+			wallet = new Wallet({
+				storeId,
+				balance: 0,
+				transactions: [],
+			});
 		}
 
-		if (store.plan.name !== 'Pro') {
-			console.log(
-				'Business not eligible for automatic transfers. Plan:',
-				store.plan.name,
-			);
-		} else {
-			console.log(
-				'Processing Paystack transfer for Pro plan business.',
-			);
+		// Add earnings to wallet balance
+		wallet.balance += vendorReceivable;
+		wallet.transactions.push({
+			amount: vendorReceivable,
+			type: 'credit',
+			reference: `PAYMENT_${orderId}`,
+			description: `Payment received for order ${orderId}`,
+			date: new Date(),
+		});
 
-			// Step 1: Retrieve user bank details
-			const { accountName, accountNumber, bankName } =
-				store?.paymentInfo[0];
-			const bankCode = await getBankCode(bankName); // Assume a function to get bank code
-			console.log('Retrieved bank code:', bankCode);
-
-			// Define the transfer fee based on the amount
-			const transferFee =
-				order.itemsAmount <= 5000
-					? 10
-					: order.itemsAmount <= 50000
-					? 25
-					: 50; // Fee structure
-
-			const totalAmountInKobo =
-				(order.itemsAmount + order.deliveryFee) * 100; // Convert to kobo
-			const feeInKobo = transferFee * 100; // Convert fee to kobo
-			const amountToTransfer = totalAmountInKobo; // Deduct fee
-
-			console.log(
-				'Amount to be transferred (in kobo):',
-				amountToTransfer / 100,
-			); // Convert to naira for display
-
-			// Step 2: Create transfer recipient
-			try {
-				const recipientResponse = await axios.post(
-					'https://api.paystack.co/transferrecipient',
-					{
-						type: 'nuban',
-						name: accountName,
-						account_number: accountNumber,
-						bank_code: bankCode,
-						currency: 'NGN',
-					},
-					{
-						headers: {
-							Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
-							'Content-Type': 'application/json',
-						},
-					},
-				);
-
-				const recipientCode =
-					recipientResponse.data.data.recipient_code;
-				console.log(
-					'Recipient code created:',
-					recipientCode,
-				);
-
-				// Step 3: Initiate the transfer
-				const transferResponse = await axios.post(
-					'https://api.paystack.co/transfer',
-					{
-						source: 'balance',
-						amount: amountToTransfer, // Use the adjusted amount
-						recipient: recipientCode,
-						reason: `Payment for Order ${order.orderNumber}`,
-					},
-					{
-						headers: {
-							Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
-							'Content-Type': 'application/json',
-						},
-					},
-				);
-
-				// Log the transfer response
-				console.log(
-					'Transfer successful:',
-					transferResponse.data,
-				);
-				const userPushToken = store?.expoPushToken; // Replace with the actual push token
-				const notificationMessage = `You just received, ₦${
-					order?.itemsAmount + order?.deliveryFee
-				} for order #${order?.orderNumber} to your ${
-					store?.paymentInfo[0]?.bankName
-				} account. Please confirm with your bank.`;
-				const title = '💰 New Payment';
-
-				sendPushNotification(
-					userPushToken,
-					notificationMessage,
-					title,
-				);
-			} catch (error) {
-				console.error(
-					'Error during transfer process:',
-					error.response
-						? error.response.data
-						: error.message,
-				);
-			}
-		}
-
+		// Save updated wallet and order
 		await order.save();
+		await wallet.save();
+
+		const userPushToken = store?.expoPushToken; // Replace with the actual push token
+		const notificationMessage = `You have a new payment of ₦${vendorReceivable} added to your wallet. `;
+		const title = 'New Payment';
+
+		sendPushNotification(
+			userPushToken,
+			notificationMessage,
+			title,
+		);
 
 		res.status(200).json({
-			message: 'Payment added successfully.',
+			message:
+				'Payment added successfully, and wallet updated.',
 			order,
+			walletBalance: wallet.balance,
 		});
 	} catch (error) {
 		res.status(500).json({ message: error.message });
@@ -962,5 +910,153 @@ export const getPaymentHistory = async (req, res) => {
 		res.status(200).json({ payments: order.payments });
 	} catch (error) {
 		res.status(500).json({ message: error.message });
+	}
+};
+
+export const processTransfer = async (req, res) => {
+	try {
+		const {
+			storeId,
+			amount,
+			bankCode,
+			accountName,
+			accountNumber,
+		} = req.body;
+
+		// Validate inputs
+		if (
+			!storeId ||
+			!amount ||
+			!bankCode ||
+			!accountName ||
+			!accountNumber
+		) {
+			return res
+				.status(400)
+				.json({ message: 'All fields are required.' });
+		}
+
+		const store = await BusinessModel.findById(storeId);
+		if (!store) {
+			return res
+				.status(404)
+				.json({ message: 'Store not found.' });
+		}
+
+		// Fetch vendor's wallet
+		let wallet = await Wallet.findOne({ storeId });
+
+		if (!wallet) {
+			return res
+				.status(400)
+				.json({ message: 'Vendor wallet not found.' });
+		}
+
+		// Paystack transfer fee logic (Vendor bears this fee)
+		const transferFee = amount <= 5000 ? 10 : 25;
+		const totalDeduction = amount + transferFee; // Total amount to deduct from wallet
+
+		// Ensure wallet has enough balance
+		if (wallet.balance < totalDeduction) {
+			return res
+				.status(400)
+				.json({ message: 'Insufficient wallet balance.' });
+		}
+
+		// Paystack Transfer API endpoint
+		const paystackUrl = 'https://api.paystack.co/transfer';
+
+		// Step 1: Create a transfer recipient (if not already created)
+		const recipientResponse = await axios.post(
+			'https://api.paystack.co/transferrecipient',
+			{
+				type: 'nuban',
+				name: accountName,
+				account_number: accountNumber,
+				bank_code: bankCode,
+				currency: 'NGN',
+			},
+			{
+				headers: {
+					Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
+					'Content-Type': 'application/json',
+				},
+			},
+		);
+
+		const recipientCode =
+			recipientResponse.data?.data?.recipient_code;
+
+		if (!recipientCode) {
+			return res.status(400).json({
+				message: 'Failed to create transfer recipient',
+			});
+		}
+
+		// Step 2: Initiate the transfer
+		const transferResponse = await axios.post(
+			paystackUrl,
+			{
+				source: 'balance',
+				amount: amount * 100, // Convert to kobo
+				recipient: recipientCode,
+				reason: 'Vendor payout',
+			},
+			{
+				headers: {
+					Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`,
+					'Content-Type': 'application/json',
+				},
+			},
+		);
+
+		// Deduct the total amount (transfer + fee) from wallet
+		wallet.balance -= totalDeduction;
+		wallet.transactions.push({
+			amount: totalDeduction,
+			type: 'debit',
+			reference: transferResponse.data?.data?.reference,
+			description: `Transfer to ${accountName} (${accountNumber})`,
+			date: new Date(),
+		});
+
+		await wallet.save();
+
+		// Save transfer record to the database
+		const transferData = new Transfer({
+			storeId,
+			amount, // The vendor receives this amount
+			bankCode,
+			accountName,
+			accountNumber,
+			transferFee,
+			status: transferResponse.data?.data?.status,
+			transferReference:
+				transferResponse.data?.data?.reference,
+		});
+
+		await transferData.save();
+
+		const userPushToken = store?.expoPushToken; // Replace with the actual push token
+		const notificationMessage = `You have made a transfer of ₦${totalDeduction} to ${accountName}. `;
+		const title = 'Successful Transfer';
+
+		sendPushNotification(
+			userPushToken,
+			notificationMessage,
+			title,
+		);
+
+		res.status(200).json({
+			success: true,
+			message: 'Transfer successful',
+			transferDetails: transferResponse.data.data,
+			newWalletBalance: wallet.balance,
+		});
+	} catch (error) {
+		res.status(500).json({
+			message: 'Error processing transfer',
+			error: error.message,
+		});
 	}
 };

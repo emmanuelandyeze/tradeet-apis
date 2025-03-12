@@ -17,6 +17,7 @@ import {
 	updatePayment,
 	addPayment,
 	getPaymentHistory,
+	processTransfer,
 } from '../controllers/orderController.js';
 
 const router = Router();
@@ -48,6 +49,8 @@ router.put('/orders/:orderId/add-runner', addRunner);
 
 router.post('/add-payment', addPayment); // Add a payment 
 router.get('/:orderId/payments', getPaymentHistory); // Get payment history
+
+router.post('/process-transfer', processTransfer);
 
 
 export default router; 
