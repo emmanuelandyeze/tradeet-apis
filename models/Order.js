@@ -36,16 +36,13 @@ const orderSchema = new mongoose.Schema(
 			default: 'pending',
 		},
 		payment: {
-			type: {
-				type: String,
-				enum: ['wallet', 'bank'],
-			},
 			status: {
 				type: String,
-				enum: ['pending', 'completed', 'failed', 'partial'],
+				enum: ['pending', 'partial', 'completed', 'failed'],
 				default: 'pending',
 			},
-			statusUpdatedAt: { type: Date }, // Timestamp for payment status
+			statusUpdatedAt: Date,
+			method: String,
 		},
 		payments: [
 			{
@@ -53,13 +50,14 @@ const orderSchema = new mongoose.Schema(
 				date: { type: Date, default: Date.now }, // Date of the payment
 				method: {
 					type: String,
-					enum: ['transfer', 'cash'],
+					enum: ['transfer', 'cash', 'paystack'],
 					// required: true,
 				},
 			},
 		],
 		amountPaid: { type: Number, default: 0 },
 		balance: { type: Number, default: 0 },
+		paystackReference: String,
 		userId: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: 'Student',

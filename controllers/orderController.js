@@ -281,6 +281,76 @@ export const createOrder = async (req, res, next) => {
 	}
 };
 
+
+
+// Middleware to verify Paystack webhook
+export const verifyPaystackWebhook = (req, res, next) => {
+  const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
+    .update(JSON.stringify(req.body))
+    .digest('hex');
+  
+  if (hash !== req.headers['x-paystack-signature']) {
+    return res.status(401).send('Unauthorized');
+  }
+  next();
+};
+
+// Webhook handler
+export const handlePaystackWebhook = async (req, res) => {
+  const event = req.body;
+  
+  // Handle successful payment event
+  if (event.event === 'charge.success') {
+    const { reference, amount, metadata } = event.data;
+    
+    try {
+      // Find order by reference (you might need to store this reference when creating payment)
+      const order = await Order.findOne({ 'paystackReference': reference });
+      
+      if (!order) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+      
+      // Check if payment already processed
+      if (order.payment.status === 'completed') {
+        return res.status(200).json({ message: 'Payment already processed' });
+      }
+      
+      // Process payment (similar to your existing addPayment logic)
+      const payment = {
+        amount: amount / 100, // Paystack amount is in kobo
+        method: 'paystack',
+        date: new Date(),
+      };
+      
+      order.payments.push(payment);
+      order.amountPaid = Number(order.amountPaid) + payment.amount;
+      order.balance = Number(order.balance) - payment.amount;
+      
+      // Update payment status
+      const totalPaid = order.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      if (totalPaid >= Number(order.totalAmount)) {
+        order.payment.status = 'completed';
+      } else {
+        order.payment.status = 'partial';
+      }
+      order.payment.statusUpdatedAt = new Date();
+      
+      // Save order and update vendor wallet (your existing logic)
+      await order.save();
+      
+      // ... rest of your wallet update logic ...
+      
+      return res.status(200).json({ message: 'Payment processed successfully' });
+    } catch (error) {
+      console.error('Webhook processing error:', error);
+      return res.status(500).json({ message: error.message });
+    }
+  }
+  
+  res.status(200).json({ message: 'Event not handled' });
+};
+
 // Accept an order by the runner
 export const acceptOrder = async (req, res, next) => {
 	try {
