@@ -89,6 +89,10 @@ export const createOrder = async (req, res, next) => {
 			1000 + Math.random() * 9000,
 		);
 
+		const paystackReference = `TRADEET_${Date.now()}_${Math.floor(
+			Math.random() * 1000,
+		)}`;
+
 		const safeNumber = (value) => Number(value) || 0;
 
 		const balance =
@@ -115,6 +119,7 @@ export const createOrder = async (req, res, next) => {
 			deliveryFee,
 			serviceFee,
 			discountAmount,
+			paystackReference,
 		});
 
 		await order.save();
