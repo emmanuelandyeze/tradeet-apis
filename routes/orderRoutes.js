@@ -58,7 +58,7 @@ router.post('/process-transfer', processTransfer);
 // routes/orderRoutes.js or similar
 router.post(
 	'/paystack/webhook',
-	verifyPaystackWebhook,
+	// verifyPaystackWebhook,
 	handlePaystackWebhook,
 );
 

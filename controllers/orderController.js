@@ -285,14 +285,25 @@ export const createOrder = async (req, res, next) => {
 
 // Middleware to verify Paystack webhook
 export const verifyPaystackWebhook = (req, res, next) => {
-  const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
-    .update(JSON.stringify(req.body))
-    .digest('hex');
-  
-  if (hash !== req.headers['x-paystack-signature']) {
-    return res.status(401).send('Unauthorized');
-  }
-  next();
+	const secret = process.env.PAYSTACK_WEBHOOK_SECRET;
+
+	if (!secret) {
+		return res.status(500).json({
+			error: 'Webhook secret not configured',
+		});
+	}
+
+	const hash = createHmac('sha512', secret)
+		.update(JSON.stringify(req.body))
+		.digest('hex');
+
+	if (hash !== req.headers['x-paystack-signature']) {
+		return res.status(401).json({
+			error: 'Invalid webhook signature',
+		});
+	}
+
+	next();
 };
 
 // Webhook handler
