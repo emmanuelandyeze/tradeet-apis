@@ -1,5 +1,14 @@
 import { Category } from '../models/Category.js';
 
+// Utility function to create a slug from a string
+const createSlug = (name) => {
+	return name
+		.toLowerCase()
+		.replace(/[^\w\s-]/g, '') // Remove non-word characters
+		.replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
+		.replace(/^-+|-+$/g, ''); // Trim hyphens from start and end
+};
+
 // Get all categories for a specific store
 export const getCategoriesByStore = async (req, res) => {
 	const { storeId } = req.params;
@@ -38,11 +47,32 @@ export const createCategory = async (req, res) => {
 	const { name, description } = req.body;
 
 	try {
+		// Generate base slug from name
+		let slug = createSlug(name);
+		let counter = 1;
+		let isUnique = false;
+
+		// Check for uniqueness and append number if needed
+		while (!isUnique) {
+			const existingCategory = await Category.findOne({
+				storeId,
+				slug,
+			});
+			if (!existingCategory) {
+				isUnique = true;
+			} else {
+				slug = `${createSlug(name)}-${counter}`;
+				counter++;
+			}
+		}
+
 		const newCategory = new Category({
 			name,
 			description,
-			storeId, // Associate category with the store
+			storeId,
+			slug, // Add the generated unique slug
 		});
+
 		await newCategory.save();
 		res.status(201).json(newCategory);
 	} catch (error) {
@@ -59,12 +89,38 @@ export const updateCategory = async (req, res) => {
 	const { name, description } = req.body;
 
 	try {
+		// If name is being updated, we should update the slug too
+		let updateData = { name, description };
+
+		if (name) {
+			const category = await Category.findById(id);
+			if (category.name !== name) {
+				// Generate new slug if name changed
+				let slug = createSlug(name);
+				let counter = 1;
+				let isUnique = false;
+
+				while (!isUnique) {
+					const existingCategory = await Category.findOne({
+						storeId: category.storeId,
+						slug,
+						_id: { $ne: id }, // Exclude current category
+					});
+					if (!existingCategory) {
+						isUnique = true;
+					} else {
+						slug = `${createSlug(name)}-${counter}`;
+						counter++;
+					}
+				}
+				updateData.slug = slug;
+			}
+		}
+
 		const updatedCategory =
-			await Category.findByIdAndUpdate(
-				id,
-				{ name, description },
-				{ new: true },
-			);
+			await Category.findByIdAndUpdate(id, updateData, {
+				new: true,
+			});
 		if (!updatedCategory) {
 			return res
 				.status(404)

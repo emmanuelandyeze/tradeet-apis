@@ -11,6 +11,7 @@ import {
 	deleteVariant,
 	updateAddon,
 	deleteAddon,
+	getProductsByCategorySlug,
 } from '../controllers/productController.js';
 
 const router = express.Router();
@@ -18,6 +19,10 @@ const router = express.Router();
 // Product routes
 router.get('/', getProducts);
 router.get('/store/:storeId', getProductsByStore);
+router.get(
+	'/store/:storeId/categories/:slug/products',
+	getProductsByCategorySlug,
+);
 router.get('/:id', getProductById); 
 router.post('/', createProduct);
 router.put('/:id', updateProduct);
