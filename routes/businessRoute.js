@@ -13,12 +13,13 @@ import {
 	findBusinessByStoreLink,
 	findBusinessProducts,
 	getWalletBalance,
+	updateOpeningHours,
 } from '../controllers/businessController.js';
 
 const router = express.Router();
 
 // Route to find businesses by service type and campus
-router.get('/', findBusinessesByServiceTypeAndCampus); 
+router.get('/', findBusinessesByServiceTypeAndCampus);
 router.get('/:businessId', findBusinessAndProductsById);
 router.get('/store/:storeLink', findBusinessByStoreLink);
 router.get('/products/:businessId', findBusinessProducts);
@@ -38,6 +39,8 @@ router.get(
 );
 router.put('/:businessId', updateBusinessInfo);
 router.put('/:businessId/expo-token', updateExpoToken);
+
+router.put('/:id/opening-hours', updateOpeningHours);
 
 router.get('/wallet/:storeId', getWalletBalance);
 

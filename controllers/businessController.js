@@ -575,3 +575,62 @@ export const getWalletBalance = async (req, res) => {
 		});
 	}
 };
+
+/**
+ * @desc Update business opening hours
+ * @route PUT /api/business/:id/opening-hours
+ * @access Private (Requires authentication)
+ */
+export const updateOpeningHours = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { openingHours } = req.body;
+
+		console.log(openingHours)
+
+		// Validate input
+		if (!openingHours || typeof openingHours !== 'object') {
+			return res
+				.status(400)
+				.json({ message: 'Invalid opening hours format' });
+		}
+
+		// Ensure valid time format (0 - 23 for 24-hour format)
+		for (const day in openingHours) {
+			const { open, close } = openingHours[day] || {};
+
+			if (
+				(open !== undefined && (open < 0 || open > 23)) ||
+				(close !== undefined && (close < 0 || close > 23))
+			) {
+				return res
+					.status(400)
+					.json({
+						message: `Invalid time for ${day}. Use 0-23 (24-hour format)`,
+					});
+			}
+		}
+
+		// Find and update business
+		const updatedBusiness =
+			await Business.findByIdAndUpdate(
+				id,
+				{ openingHours },
+				{ new: true, runValidators: true },
+			);
+
+		if (!updatedBusiness) {
+			return res
+				.status(404)
+				.json({ message: 'Business not found' });
+		}
+
+		res.status(200).json({
+			message: 'Opening hours updated successfully',
+			openingHours: updatedBusiness.openingHours,
+		});
+	} catch (error) {
+		console.error(error);
+		res.status(500).json({ message: 'Server error' });
+	}
+};

@@ -71,6 +71,7 @@ const orderSchema = new mongoose.Schema(
 		deliveryFee: { type: Number },
 		serviceFee: { type: Number },
 		discountAmount: { type: Number },
+		scheduledTime: { type: String },
 	},
 	{
 		timestamps: true, // Automatically adds createdAt and updatedAt fields

@@ -67,6 +67,7 @@ export const createOrder = async (req, res, next) => {
 			deliveryFee,
 			serviceFee,
 			discountAmount,
+			scheduledTime,
 		} = req.body;
 
 		// Fetch the user's wallet information from the database
@@ -120,6 +121,7 @@ export const createOrder = async (req, res, next) => {
 			serviceFee,
 			discountAmount,
 			paystackReference,
+			scheduledTime,
 		});
 
 		await order.save();
