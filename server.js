@@ -17,12 +17,13 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import invoiceRoutes from './routes/invoiceRoutes.js';
 import expenseRoutes from './routes/expenseRoutes.js';
 import { Server } from 'socket.io';
+import googleRoutes from './routes/googlePlacesRoutes.js';
 
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const port = process.env.PORT || 5000; 
+const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(express.json());
@@ -43,6 +44,7 @@ app.use('/discounts', discountRoutes);
 app.use('/category', categoryRoutes);
 app.use('/invoices', invoiceRoutes);
 app.use('/expenses', expenseRoutes);
+app.use('/google', googleRoutes);
 
 const io = new Server(server, {
 	cors: {
