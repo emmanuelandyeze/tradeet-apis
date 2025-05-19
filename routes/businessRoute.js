@@ -19,7 +19,7 @@ import {
 const router = express.Router();
 
 // Route to find businesses by service type and campus
-router.get('/', findBusinessesByServiceTypeAndCampus);
+router.get('/', findBusinessesByServiceTypeAndCampus); 
 router.get('/:businessId', findBusinessAndProductsById);
 router.get('/store/:storeLink', findBusinessByStoreLink);
 router.get('/products/:businessId', findBusinessProducts);

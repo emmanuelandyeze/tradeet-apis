@@ -44,6 +44,19 @@ const OpeningHoursSchema = new mongoose.Schema(
 	{ _id: false },
 );
 
+const socialAccountsSchema = new mongoose.Schema(
+	{
+		linkedin: {
+			id: String,
+			name: String,
+			email: String,
+			accessToken: String, // Consider encrypting in production
+		},
+		// You can add other platforms here (e.g., Instagram, Facebook, Twitter)
+	},
+	{ _id: false },
+);
+
 const businessSchema = new mongoose.Schema({
 	phone: { type: String, required: true, unique: true },
 	isVerified: { type: Boolean, default: true },
@@ -62,6 +75,7 @@ const businessSchema = new mongoose.Schema({
 	estimatedDelivery: { type: String, default: '10 mins' },
 	paymentInfo: { type: [paymentInfoSchema], default: [] },
 	email: { type: String },
+	socialAccounts: socialAccountsSchema,
 	// Subscription plan fields
 	plan: {
 		name: {
