@@ -389,7 +389,7 @@ async function handleVendorSelection(from, vendorId) {
 					name:
 						vendor?.serviceType === 'products'
 							? 'item_cards'
-							: 'service_cards', // Your approved template name
+							: 'services_cards', // Your approved template name
 					language: {
 						code: 'en_US',
 					},
