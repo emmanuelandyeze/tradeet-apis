@@ -12,6 +12,7 @@ import {
 	updateAddon,
 	deleteAddon,
 	getProductsByCategorySlug,
+	getProductsByCategoryId,
 } from '../controllers/productController.js';
 
 const router = express.Router();
@@ -19,6 +20,10 @@ const router = express.Router();
 // Product routes
 router.get('/', getProducts);
 router.get('/store/:storeId', getProductsByStore);
+router.get(
+	'/store/:storeId/categories/:id',
+	getProductsByCategoryId,
+);
 router.get(
 	'/store/:storeId/categories/:slug/products',
 	getProductsByCategorySlug,

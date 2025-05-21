@@ -150,7 +150,7 @@ export const findBusinessProducts = async (req, res) => {
 // Controller to get business information by business ID
 export const findBusinessById = async (req, res) => {
 	const { businessId } = req.params;
-	console.log(businessId);
+	// console.log(businessId);
 
 	try {
 		// Find the business by the provided businessId, excluding password
@@ -158,7 +158,7 @@ export const findBusinessById = async (req, res) => {
 			businessId,
 		).select('-password');
 
-		console.log(business);
+		// console.log(business);
 
 		// If the business is not found, return a 404 response
 		if (!business) {

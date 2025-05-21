@@ -91,6 +91,42 @@ export const getProductsByCategorySlug = async (req, res) => {
   }
 };
 
+// Get products by category id
+export const getProductsByCategoryId = async (req, res) => {
+	const { storeId, id } = req.params;
+	
+	
+	try {
+	  // First find the category by slug and storeId
+	  const category = await Category.findOne({
+			_id: id
+		});
+		
+	  console.log(category)
+	  if (!category) {
+		return res.status(404).json({ 
+		  message: 'Category not found' 
+		});
+	  }
+  
+	  // Then find all products in this category
+	  const products = await Product.find({ 
+		storeId, 
+		category: category._id 
+	  }).populate('category');
+		
+	//   console.log(id);
+	  console.log(products);
+  
+	  res.status(200).json(products);
+	} catch (error) {
+	  res.status(500).json({ 
+		message: 'Failed to fetch products by category slug', 
+		error 
+	  });
+	}
+  };
+
 // Create a new product
 export const createProduct = async (req, res) => {
 	const {

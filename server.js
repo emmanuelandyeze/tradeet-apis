@@ -19,6 +19,7 @@ import expenseRoutes from './routes/expenseRoutes.js';
 import { Server } from 'socket.io';
 import googleRoutes from './routes/googlePlacesRoutes.js';
 import webhookRoutes from './routes/webhookRoutes.js';
+import customerRoutes from './routes/customerRoutes.js';
 import {
 	decryptRequest,
 	encryptResponse,
@@ -73,6 +74,7 @@ app.use('/invoices', invoiceRoutes);
 app.use('/expenses', expenseRoutes);
 app.use('/google', googleRoutes);
 app.use('/webhooks', webhookRoutes);
+app.use('/customers', customerRoutes);
 
 app.post('/', async (req, res) => {
 	if (!PRIVATE_KEY) {
