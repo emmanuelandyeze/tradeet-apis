@@ -9,8 +9,7 @@ const PHONE_NUMBER_ID = '432799279914651';
 const GOOGLE_MAPS_API_KEY =
 	'AIzaSyDB9u0LKWhMKSBImf97RJjD8KzNq8rfPMY';
 
-const api_url =
-	'https://abbeab96b2253f6afbc92b4599eb5b77.serveo.net';
+const api_url = 'https://tradeet-api.onrender.com';
 
 async function reverseGeocode(lat, lng) {
 	try {
