@@ -622,9 +622,7 @@ async function handleCategorySelection(
 		);
 		const allProducts = getProducts?.data || [];
 		// products = allProducts?.slice(0, 10);
-		products = allProducts
-			.filter((p) => p.name && p.price && p._id) // Ensures no empty fields
-			.slice(0, 5);
+		products = allProducts?.slice(0, 5);
 
 		// Pad with empty placeholders if fewer than 5
 		while (products.length < 5) {
