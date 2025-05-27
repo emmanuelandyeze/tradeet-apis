@@ -9,6 +9,8 @@ const PHONE_NUMBER_ID = '432799279914651';
 const GOOGLE_MAPS_API_KEY =
 	'AIzaSyDB9u0LKWhMKSBImf97RJjD8KzNq8rfPMY';
 
+// const api_url =
+	// 'https://95d9844089dffd6286ee72e7dc1e0e13.serveo.net';
 const api_url = 'https://tradeet-api.onrender.com';
 
 async function reverseGeocode(lat, lng) {
@@ -32,6 +34,26 @@ async function reverseGeocode(lat, lng) {
 	}
 }
 
+async function showTypingIndicator(id) {
+	await axios.post(
+		`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
+		{
+			messaging_product: 'whatsapp',
+			status: 'read',
+			message_id: id,
+			typing_indicator: {
+				type: 'text',
+			},
+		},
+		{
+			headers: {
+				Authorization: `Bearer ${process.env.FB_SECRET}`,
+				'Content-Type': 'application/json',
+			},
+		},
+	);
+}
+
 router.get('/', (req, res) => {
 	const mode = req.query['hub.mode'];
 	const token = req.query['hub.verify_token'];
@@ -52,6 +74,7 @@ router.post('/', async (req, res) => {
 	const value = changes?.value;
 	const message = value?.messages?.[0];
 	const from = message?.from;
+	const id = message?.id;
 	const profileName =
 		value?.contacts?.[0]?.profile?.name || 'there';
 
@@ -90,16 +113,18 @@ router.post('/', async (req, res) => {
 				coins: 0,
 			});
 			await customer.save();
-			console.log('✅ New customer created:', from);
+			await showTypingIndicator(id);
 			await requestUserLocation(from, profileName);
 		} else {
 			console.log('👋 Returning customer:', from);
+			await showTypingIndicator(id);
 			await sendConfirmOrChangeLocation(from, customer);
 		}
 	}
 
 	if (message?.interactive?.type === 'button_reply') {
 		const buttonId = message?.interactive?.button_reply?.id;
+		await showTypingIndicator(id);
 
 		if (buttonId === 'confirm_location') {
 			await axios.post(
@@ -129,6 +154,7 @@ router.post('/', async (req, res) => {
 
 	if (message?.type === 'location') {
 		const { latitude, longitude, name } = message.location;
+		await showTypingIndicator(id);
 
 		// ✅ Get the address from Google
 		const address = await reverseGeocode(
@@ -178,6 +204,7 @@ router.post('/', async (req, res) => {
 	if (message?.interactive?.type === 'list_reply') {
 		const selectedId = message.interactive.list_reply.id;
 		console.log(`📦 User selected list ID: ${selectedId}`);
+		await showTypingIndicator(id);
 
 		if (selectedId.startsWith('vendor_')) {
 			// 📌 User selected a vendor
@@ -190,6 +217,11 @@ router.post('/', async (req, res) => {
 				.split('vendorcat_')[1]
 				.split('_');
 			await handleCategorySelection(from, vendorId, catId);
+		} else if (selectedId.startsWith('vendorprod_')) {
+			const [vendorId, prodId] = selectedId
+				.split('vendorprod_')[1]
+				.split('_');
+			await handleMakeSelection(from, vendorId, prodId);
 		} else {
 			return;
 		}
@@ -270,7 +302,7 @@ async function requestUserLocation(from, profileName) {
 	);
 }
 
-export async function sendCategoryList(to) {
+async function sendCategoryList(to) {
 	try {
 		await axios.post(
 			`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
@@ -550,9 +582,7 @@ async function handleVendorSelection(from, vendorId) {
 				category?.name?.length > 24
 					? category?.name?.slice(0, 21) + '...'
 					: category?.name,
-			description:
-				category.description ||
-				'View items in this category',
+			description: category.description || ' ',
 		}));
 
 		// Send WhatsApp list
@@ -614,7 +644,6 @@ async function handleCategorySelection(
 		const vendor = getVendor?.data?.business;
 
 		let products = [];
-		let cards = [];
 
 		// Fetch vendor products
 		const getProducts = await axios.get(
@@ -622,67 +651,19 @@ async function handleCategorySelection(
 		);
 		const allProducts = getProducts?.data || [];
 		// products = allProducts?.slice(0, 10);
-		products = allProducts?.slice(0, 5);
+		products = allProducts?.slice(0, 9);
 
-		// Pad with empty placeholders if fewer than 5
-		while (products.length < 5) {
-			products.push({
-				_id: 'placeholder',
-				name: 'Coming soon',
-				price: '',
-				image:
-					'https://developers.elementor.com/docs/assets/img/elementor-placeholder-image.png',
-			});
-		}
-
-		// Create cards for products
-		cards = products?.map((product, index) => ({
-			card_index: index,
-			components: [
-				{
-					type: 'header',
-					parameters: [
-						{
-							type: 'image',
-							image: {
-								link:
-									product.image ||
-									'https://via.placeholder.com/150',
-							},
-						},
-					],
-				},
-				{
-					type: 'body',
-					parameters: [
-						{
-							type: 'text',
-							text: product.name || 'No name',
-						},
-						{
-							type: 'text',
-							text: product.price
-								? `${product.price}`
-								: 'Price not available',
-						},
-					],
-				},
-				{
-					type: 'button',
-					sub_type: 'url',
-					index: '0',
-					parameters: [
-						{
-							type: 'text',
-							text: `${vendor.storeLink}/product/${product._id}`,
-						},
-					],
-				},
-			],
+		const rows = products.map((product, index) => ({
+			id: `vendorprod_${vendor._id}_${product._id}`, // format for later parsing
+			title:
+				product?.name?.length > 24
+					? product?.name?.slice(0, 21) + '...'
+					: product?.name,
+			description: '🏷️' + ' ₦' + product.price,
 		}));
 
 		// If no cards are available, send a fallback message
-		if (!cards.length) {
+		if (!rows.length) {
 			await axios.post(
 				`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
 				{
@@ -701,35 +682,68 @@ async function handleCategorySelection(
 				},
 			);
 			return;
-		}
+		} else {
+			// Send the carousel message
+			const res = await axios.post(
+				`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
+				{
+					messaging_product: 'whatsapp',
+					to: from,
+					type: 'interactive',
+					interactive: {
+						type: 'list',
 
-		// Send the carousel message
-		await axios.post(
-			`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
-			{
-				messaging_product: 'whatsapp',
-				to: from,
-				type: 'template',
-				template: {
-					name: 'item_cards',
-					language: {
-						code: 'en_US',
-					},
-					components: [
-						{
-							type: 'body',
-							parameters: [
+						body: {
+							text: 'Please select an item to purchase:',
+						},
+						action: {
+							button: 'View items',
+							sections: [
 								{
-									type: 'text',
-									text: vendor.name,
+									title: 'Available Items',
+									rows,
 								},
 							],
 						},
-						{
-							type: 'carousel',
-							cards: cards,
-						},
-					],
+					},
+				},
+				{
+					headers: {
+						Authorization: `Bearer ${process.env.FB_SECRET}`,
+						'Content-Type': 'application/json',
+					},
+				},
+			);
+			console.log('✅ Product list sent successfully.');
+			console.log(res.data.messages);
+		}
+	} catch (error) {
+		console.error(
+			'Error sending carousel:',
+			error.response?.data || error.message,
+		);
+	}
+}
+
+async function handleMakeSelection(from, vendorId, prodId) {
+	try {
+		// Fetch vendor data
+		const getVendor = await axios.get(
+			`${api_url}/businesses/b/${vendorId}`,
+		);
+		const vendor = getVendor?.data?.business;
+
+		// Send the text message
+		const res = await axios.post(
+			`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
+			{
+				messaging_product: 'whatsapp',
+				recipient_type: 'individual',
+				to: from,
+				type: 'text',
+				text: {
+					preview_url: true,
+					body: `As requested, here's the link to the product: \n \n https://tradeet.ng/store/${vendor?.storeLink}/product/${prodId}`,
 				},
 			},
 			{
@@ -737,11 +751,10 @@ async function handleCategorySelection(
 					Authorization: `Bearer ${process.env.FB_SECRET}`,
 					'Content-Type': 'application/json',
 				},
-				timeout: 10000,
 			},
 		);
-
-		console.log('Carousel sent successfully');
+		console.log('✅ Product link sent successfully.');
+		console.log(res.data.messages);
 	} catch (error) {
 		console.error(
 			'Error sending carousel:',
