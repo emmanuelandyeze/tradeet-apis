@@ -42,6 +42,6 @@ router.put('/:businessId/expo-token', updateExpoToken);
 
 router.put('/:id/opening-hours', updateOpeningHours);
 
-router.get('/wallet/:storeId', getWalletBalance);
+router.get('/wallet/:storeId', getWalletBalance); 
 
 export default router; 

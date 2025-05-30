@@ -4,6 +4,7 @@ import { Product } from '../models/Product.js'; // Import the Product model
 import Order from '../models/Order.js';
 import { Category } from '../models/Category.js';
 import Wallet from '../models/Wallet.js';
+import Transfer from '../models/Transfer.js';
 
 // Controller to find businesses by service type and campus
 export const findBusinessesByServiceTypeAndCampus = async (
@@ -576,6 +577,33 @@ export const getWalletBalance = async (req, res) => {
 		});
 	}
 };
+
+export const getTransferHistory = async (req, res) => {
+	try {
+		const { storeId } = req.params;
+
+		// Fetch the wallet for the vendor
+		const transfers = await Transfer.findOne({ storeId });
+
+		if (!transfers) {
+			return res.status(404).json({
+				message:
+					'Transfers not found for the specified store',
+			});
+		}
+
+		res.status(200).json({
+			success: true,
+			transfers: transfers, // Include transactions if needed
+		});
+	} catch (error) {
+		res.status(500).json({
+			message: 'Error fetching wallet balance',
+			error: error.message,
+		});
+	}
+};
+
 
 /**
  * @desc Update business opening hours
