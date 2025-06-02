@@ -10,9 +10,9 @@ const orderSchema = new mongoose.Schema(
 		customerInfo: {
 			name: { type: String, required: true },
 			contact: { type: String, required: true },
-			address: { type: String },
-			expoPushToken: { type: String },
-			pickUp: { type: Boolean },
+			address: { type: String }, // Address if delivery
+			pickUp: { type: Boolean, default: false }, // True if customer picks up
+			expoPushToken: { type: String }, // Customer's push token
 		},
 		runnerInfo: {
 			runnerId: {
@@ -22,6 +22,11 @@ const orderSchema = new mongoose.Schema(
 			accepted: { type: Boolean, default: false },
 			status: { type: String, default: 'pending' },
 			acceptedAt: { type: Date }, // Timestamp for when the runner accepts
+			name: { type: String },
+			contact: { type: String },
+			expoPushToken: { type: String },
+			price: { type: Number },
+			assignedAt: { type: Date },
 		},
 		items: [],
 		status: {

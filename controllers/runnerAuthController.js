@@ -4,44 +4,86 @@ import axios from 'axios';
 import Runner from '../models/Runner.js';
 
 // Function to send WhatsApp verification code using WhatsApp Business API
-const sendCode = async (phone, verificationCode) => {
-	const accessToken = process.env.FB_SECRET;
-	const url =
-		'https://graph.facebook.com/v20.0/382339108296299/messages';
-
+const sendCode = async (whatsapp, verificationCode) => {
 	try {
-		const response = await axios.post(
-			url,
-			{
-				messaging_product: 'whatsapp',
-				to: phone,
-				type: 'template',
-				template: {
-					name: 'code',
-					language: { code: 'en' },
-					components: [
-						{
-							type: 'body',
-							parameters: [
-								{ type: 'text', text: verificationCode },
+		const sendMessage = async () => {
+			const accessToken = process.env.FB_SECRET;
+			const url =
+				'https://graph.facebook.com/v21.0/432799279914651/messages';
+
+			try {
+				const response = await axios.post(
+					url,
+					{
+						messaging_product: 'whatsapp',
+						to: whatsapp, // Ensure the correct phone number
+						type: 'template',
+						template: {
+							name: 'verification',
+							language: {
+								code: 'en',
+							},
+							components: [
+								{
+									type: 'body',
+									parameters: [
+										{
+											type: 'text',
+											text: verificationCode,
+										},
+									],
+								},
+								{
+									type: 'button',
+									sub_type: 'url',
+									index: '0',
+									parameters: [
+										{
+											type: 'text',
+											text: verificationCode,
+										},
+									],
+								},
 							],
 						},
-					],
-				},
-			},
-			{
-				headers: {
-					Authorization: `Bearer ${accessToken}`,
-					'Content-Type': 'application/json',
-				},
-			},
-		);
-		console.log('Verification code sent:', response.data);
+					},
+					{
+						headers: {
+							Authorization: `Bearer ${accessToken}`,
+							'Content-Type': 'application/json',
+						},
+					},
+				);
+
+				console.log('Response:', response.data);
+				// Further logging
+				console.log(
+					'Message ID:',
+					response.data.messages[0].id,
+				);
+				console.log(
+					'Recipient WA ID:',
+					response.data.contacts[0].wa_id,
+				);
+			} catch (error) {
+				console.error(
+					'Error sending message:',
+					error.response
+						? error.response.data
+						: error.message,
+				);
+			}
+		};
+
+		sendMessage();
+
+		return verificationCode;
 	} catch (error) {
 		console.error(
-			'Error sending message:',
-			error.response ? error.response.data : error.message,
+			'Error sending verification code:',
+			error,
 		);
+		throw new Error('Failed to send verification code.');
 	}
 };
 
@@ -58,17 +100,17 @@ export const sendVerificationCode = async (req, res) => {
 			});
 		}
 
-		// const verificationCode = Math.floor(
-		// 	1000 + Math.random() * 9000,
-		// ); // 4-digit code
+		const verificationCode = Math.floor(
+			1000 + Math.random() * 9000,
+		); // 4-digit code
 
-		const verificationCode = 1234;
+		// const verificationCode = 1234;
 
 		runner = new Runner({ phone, verificationCode });
 		console.log(runner);
 		await runner.save();
 
-		// await sendCode(phone, verificationCode);
+		await sendCode(phone, verificationCode);
 		res.status(200).json({
 			message: 'Verification code sent via WhatsApp',
 		});

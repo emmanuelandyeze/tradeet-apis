@@ -8,6 +8,7 @@ const categorySchema = new mongoose.Schema({
 		ref: 'Business',
 		required: true,
 	}, // Store-specific categories
+	slug: { type: String },
 });
 
 export const Category = mongoose.model(

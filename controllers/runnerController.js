@@ -221,7 +221,7 @@ export const markOrderAsDelivered = async (req, res) => {
 				.json({ message: 'Runner not found' });
 		}
 
-		runner.wallet += runner.price; // Assuming itemsAmount is the runner's earning for this order
+		runner.wallet += order?.runnerInfo?.price; // Assuming itemsAmount is the runner's earning for this order
 		await runner.save();
 
 		// Notify clients that the order has been delivered

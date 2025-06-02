@@ -2,20 +2,23 @@ import BusinessModel from '../models/BusinessModel.js';
 import Wallet from '../models/Wallet.js';
 import Order from '../models/Order.js';
 import Transfer from '../models/Transfer.js';
+import RunnerModel from '../models/Runner.js'; // Assuming you have a RunnerModel
 import { io } from '../server.js';
 import axios from 'axios';
 import { Expo } from 'expo-server-sdk';
+import { createHmac } from 'crypto'; // Import createHmac for Paystack webhook verification
 
 // Create a new Expo SDK client
 const expo = new Expo();
 
-// Array to store push tickets
+// Array to store push tickets (consider moving this to a more persistent storage for production)
 const pushTickets = [];
 
 async function sendPushNotification(
 	pushToken,
 	message,
 	title,
+	data = {}, // Added data parameter for more context
 ) {
 	// Check if the push token is valid
 	if (!Expo.isExpoPushToken(pushToken)) {
@@ -31,7 +34,7 @@ async function sendPushNotification(
 		sound: 'default',
 		title: title,
 		body: message,
-		data: { withSome: 'data' },
+		data: data, // Use the provided data
 	};
 
 	try {
@@ -47,8 +50,149 @@ async function sendPushNotification(
 		);
 	} catch (error) {
 		console.error('Error sending notification:', error);
+		// Optionally, handle specific Expo errors (e.g., token invalidated)
 	}
 }
+
+// --- NEW CONTROLLER FUNCTION FOR ASSIGNING RUNNER ---
+export const assignRunnerToOrder = async (req, res) => {
+	const { orderId } = req.params;
+	const { runnerId } = req.body;
+
+	try {
+		// 1. Find the order
+		const order = await Order.findById(orderId).populate(
+			'storeId',
+		);
+
+		if (!order) {
+			return res
+				.status(404)
+				.json({ message: 'Order not found.' });
+		}
+
+		// 2. Verify order status
+		if (
+			order.status !== 'accepted' &&
+			order.status !== 'pending'
+		) {
+			return res.status(400).json({
+				message:
+					'Order must be in "pending" or "accepted" status to assign a runner.',
+			});
+		}
+
+		if (order.delivery?.runnerInfo?.runnerId) {
+			return res.status(400).json({
+				message:
+					'A runner is already assigned to this order.',
+			});
+		}
+
+		// Check if it's a customer pickup order
+		if (order.customerInfo?.pickUp === true) {
+			return res.status(400).json({
+				message:
+					'This is a customer pickup order; runners cannot be assigned.',
+			});
+		}
+
+		// 3. Find the runner
+		const runner = await RunnerModel.findById(runnerId); // Assuming you have a RunnerModel
+		if (!runner) {
+			return res
+				.status(404)
+				.json({ message: 'Runner not found.' });
+		}
+
+		// 4. Calculate delivery price (PLACEHOLDER LOGIC)
+		// This is a crucial part you need to implement based on your business logic.
+		// Factors could include: distance, runner's rate, time of day, etc.
+		// For demonstration, let's assume a simple fixed price or a lookup.
+		let deliveryPrice = 0;
+		// Example: If runner has a fixed rate, or calculate based on order.deliveryFee and your business model
+		// You might need to query a pricing service or a more complex calculation here.
+		if (order.deliveryFee) {
+			deliveryPrice =
+				order.deliveryFee -
+				(37.5 / 100) * Number(order.deliveryFee); // Assuming runner gets the delivery fee charged to customer
+			// Or calculate based on distance, e.g.:
+			// const customerAddress = order.customerInfo.address;
+			// const storeAddress = order.storeId.address;
+			// Calculate distance between customerAddress and storeAddress
+			// deliveryPrice = calculatePriceBasedOnDistance(customerAddress, storeAddress, runner.rate);
+		} else {
+			// Default delivery price if none set, or based on zones/distance
+			deliveryPrice = 150; // Example fixed price
+		}
+
+		// 5. Update the order with runner's information
+		order.runnerInfo = {
+			runnerId: runner._id,
+			name: runner.name, // Assuming runner has a name field
+			contact: runner.contact, // Assuming runner has a contact field
+			expoPushToken: runner.expoPushToken, // Runner's push token
+			accepted: false, // Runner still needs to accept the assignment from their end
+			assignedAt: new Date(),
+			price: deliveryPrice, // Store the calculated price for this specific assignment
+			status: 'assigned', // New: Set runner-specific status
+		};
+
+		// Update order status if not already 'in progress'
+		if (order.status !== 'in progress') {
+			order.status = 'in progress';
+		}
+
+		await order.save();
+
+		// 6. Send a push notification to the assigned runner
+		if (runner.expoPushToken) {
+			sendPushNotification(
+				runner.expoPushToken,
+				`You have been assigned a new delivery for order #${order.orderNumber}. Tap to view details.`,
+				'New Delivery Assignment!',
+				{
+					orderId: order._id.toString(),
+					type: 'newAssignment',
+				}, // Include orderId in data
+			);
+		}
+
+		// 7. Emit a Socket.IO event for real-time updates
+		// To the specific runner (if they are connected)
+		io.to(runner._id.toString()).emit(
+			'newRunnerAssignment',
+			{
+				message: `You have a new delivery assignment: Order #${order.orderNumber}`,
+				order: order,
+			},
+		);
+		// To the store that assigned the runner
+		io.to(order.storeId._id.toString()).emit(
+			'orderRunnerAssigned',
+			{
+				message: `Runner ${runner.name} assigned to Order #${order.orderNumber}`,
+				order: order,
+			},
+		);
+
+		res.status(200).json({
+			message: 'Runner successfully assigned to order.',
+			order: order,
+		});
+	} catch (error) {
+		console.error(
+			'Error assigning runner to order:',
+			error,
+		);
+		res.status(500).json({
+			message: 'Failed to assign runner to order.',
+			error: error.message,
+		});
+	}
+};
+
+// ... (rest of your existing order controller code) ...
 
 export const createOrder = async (req, res, next) => {
 	try {
@@ -60,7 +204,7 @@ export const createOrder = async (req, res, next) => {
 			userId,
 			totalAmount,
 			itemsAmount,
-			runnerInfo,
+			// runnerInfo, // Remove runnerInfo from direct creation, it's assigned later
 			status,
 			discountCode,
 			deliveryOption,
@@ -112,7 +256,7 @@ export const createOrder = async (req, res, next) => {
 			itemsAmount,
 			orderNumber,
 			status,
-			runnerInfo,
+			// runnerInfo, // No runnerInfo on initial creation
 			deliveryCode,
 			discountCode,
 			deliveryOption,
@@ -122,6 +266,11 @@ export const createOrder = async (req, res, next) => {
 			discountAmount,
 			paystackReference,
 			scheduledTime,
+			// Initialize delivery field, type will be 'customer_pickup' if applicable, otherwise null/undefined
+			delivery:
+				customerInfo?.pickUp === true
+					? { type: 'customer_pickup' }
+					: { type: 'unassigned' },
 		});
 
 		await order.save();
@@ -287,8 +436,6 @@ export const createOrder = async (req, res, next) => {
 		});
 	}
 };
-
-
 
 // Middleware to verify Paystack webhook
 export const verifyPaystackWebhook = (req, res, next) => {
@@ -511,7 +658,7 @@ export const getOrderById = async (req, res) => {
 	try {
 		const order = await Order.findById(req.params.orderId)
 			.populate('storeId')
-			.populate('runnerInfo.runnerId');
+			.populate('runnerInfo.runnerId'); // Populate runnerInfo.runnerId for full runner details
 
 		if (!order) {
 			return res
@@ -632,7 +779,7 @@ export const getIncomingOrdersForRunner = async (
 		const { runnerId } = req.params;
 		const orders = await Order.find({
 			'runnerInfo.runnerId': { $ne: runnerId },
-			status: 'pending',
+			status: 'pending', // Only show pending orders not assigned to this runner
 		})
 			.populate('storeId')
 			.populate('runnerInfo.runnerId');
@@ -655,11 +802,11 @@ export const getAcceptedOrdersForRunner = async (
 	try {
 		const { runnerId } = req.params;
 		const orders = await Order.find({
-			'runnerInfo.runnerId': runnerId,
-			'runnerInfo.accepted': true,
+			'delivery.runnerInfo.runnerId': runnerId, // Use the new delivery.runnerInfo field
+			'delivery.runnerInfo.accepted': true, // Make sure the runner has explicitly accepted it
 		})
 			.populate('storeId')
-			.populate('runnerInfo.runnerId');
+			.populate('delivery.runnerInfo.runnerId'); // Populate the correct path
 
 		res.json(orders);
 	} catch (error) {
@@ -698,7 +845,7 @@ export const getOrdersByUserId = async (req, res) => {
 export const acceptOrderByVendor = async (req, res) => {
 	console.log('acceptOrderByVendor called');
 	const { orderId } = req.params;
-	const { storeId } = req.body; // Assuming storeId is in the authenticated user object
+	// const { storeId } = req.body; // storeId should come from authentication middleware in a real app
 
 	try {
 		const order = await Order.findById(orderId);
@@ -710,19 +857,20 @@ export const acceptOrderByVendor = async (req, res) => {
 				.json({ message: 'Order not found' });
 		}
 
-		if (order.storeId.toString() !== storeId.toString()) {
-			return res.status(403).json({
+		// Add proper authorization check here, e.g., if (order.storeId.toString() !== req.user.storeId.toString())
+		// if (order.storeId.toString() !== storeId.toString()) {
+		//   return res.status(403).json({
+		//       message:
+		//           'You are not authorized to accept this order',
+		//   });
+		// }
+
+		if (order.status !== 'pending') {
+			return res.status(400).json({
 				message:
-					'You are not authorized to accept this order',
+					'Order cannot be accepted in the current status (must be pending).',
 			});
 		}
-
-		// if (order.status !== 'pending') {
-		// 	return res.status(400).json({
-		// 		message:
-		// 			'Order cannot be accepted in the current status',
-		// 	});
-		// }
 
 		order.status = 'accepted';
 		await order.save();
@@ -735,16 +883,17 @@ export const acceptOrderByVendor = async (req, res) => {
 			order,
 		});
 	} catch (error) {
-		res
-			.status(500)
-			.json({ message: 'Server error', error });
+		res.status(500).json({
+			message: 'Server error',
+			error: error.message,
+		});
 	}
 };
 
 // Cancel an order by vendor
 export const cancelOrderByVendor = async (req, res) => {
 	const { orderId } = req.params;
-	const { storeId } = req.body; // Assuming storeId is in the authenticated user object
+	// const { storeId } = req.body; // storeId should come from authentication middleware
 
 	try {
 		const order = await Order.findById(orderId);
@@ -755,21 +904,27 @@ export const cancelOrderByVendor = async (req, res) => {
 				.json({ message: 'Order not found' });
 		}
 
-		if (order.storeId.toString() !== storeId.toString()) {
-			return res.status(403).json({
-				message:
-					'You are not authorized to cancel this order',
-			});
-		}
+		// Add proper authorization check here
+		// if (order.storeId.toString() !== storeId.toString()) {
+		//   return res.status(403).json({
+		//       message:
+		//           'You are not authorized to cancel this order',
+		//   });
+		// }
 
-		if (order.status !== 'pending') {
+		if (
+			order.status !== 'pending' &&
+			order.status !== 'accepted' &&
+			order.status !== 'in progress'
+		) {
+			// Allow cancellation from 'in progress' too
 			return res.status(400).json({
 				message:
-					'Order cannot be canceled in the current status',
+					'Order cannot be canceled in the current status.',
 			});
 		}
 
-		order.status = 'canceled';
+		order.status = 'cancelled';
 		await order.save();
 
 		io.emit('orderUpdate', order); // Emit the order cancellation via socket
@@ -779,9 +934,10 @@ export const cancelOrderByVendor = async (req, res) => {
 			order,
 		});
 	} catch (error) {
-		res
-			.status(500)
-			.json({ message: 'Server error', error });
+		res.status(500).json({
+			message: 'Server error',
+			error: error.message,
+		});
 	}
 };
 
@@ -789,7 +945,7 @@ export const cancelOrderByVendor = async (req, res) => {
 export const completeOrderByVendor = async (req, res) => {
 	console.log('completeOrderByVendor called');
 	const { orderId } = req.params;
-	const { storeId } = req.body; // Assuming storeId is in the authenticated user object
+	const { deliveryCode } = req.body; // Expecting deliveryCode for verification
 
 	try {
 		const order = await Order.findById(orderId);
@@ -800,84 +956,58 @@ export const completeOrderByVendor = async (req, res) => {
 				.json({ message: 'Order not found' });
 		}
 
-		if (order.status !== 'accepted') {
+		// Check if the order is ready for completion based on its state and delivery type
+		const isCustomerPickup =
+			order.customerInfo?.pickUp === true;
+		const isSelfDelivery = order.delivery?.type === 'self';
+		const isAssignedDelivery =
+			order.delivery?.type === 'assigned' &&
+			order.delivery?.runnerInfo?.runnerId;
+
+		if (
+			order.status !== 'accepted' &&
+			order.status !== 'in progress'
+		) {
 			return res.status(400).json({
 				message:
-					'Order cannot be completed in the current status',
+					'Order cannot be completed in the current status. It must be accepted or in progress.',
 			});
 		}
 
-		console.log(order);
+		// Verify delivery code for all applicable delivery types
+		if (
+			(isCustomerPickup ||
+				isSelfDelivery ||
+				isAssignedDelivery) &&
+			order.deliveryCode !== deliveryCode
+		) {
+			return res.status(400).json({
+				message: 'Invalid delivery verification code.',
+			});
+		}
 
 		order.status = 'completed';
+		// Set completion timestamp
+		order.completedAt = new Date();
 		await order.save();
 
 		io.emit('orderUpdate', order); // Emit the updated order
 		console.log('Order update emitted successfully');
 
 		res.status(200).json({
-			message: 'Order accepted successfully',
+			message: 'Order completed successfully',
 			order,
 		});
 	} catch (error) {
-		res
-			.status(500)
-			.json({ message: 'Server error', error });
-	}
-};
-
-// Add a runner to an order
-export const addRunner = async (req, res) => {
-	const { orderId } = req.params;
-	const { runnerId } = req.body;
-
-	try {
-		const order = await Order.findById(orderId);
-		if (!order) {
-			return res
-				.status(404)
-				.json({ message: 'Order not found' });
-		}
-
-		if (order.status !== 'accepted') {
-			return res.status(400).json({
-				message:
-					'Order must be accepted by a runner before assigning a runner to it',
-			});
-		}
-
-		// Update the order with runner's information
-		order.runnerInfo = {
-			runnerId,
-			accepted: true,
-			acceptedAt: new Date(),
-		};
-		order.status = 'in progress'; // Change status to 'in progress'
-
-		await order.save();
-
-		// Emit events to notify the store and customer
-		io.emit('orderRunnerAssigned', {
-			message: 'A runner has been assigned to your order',
-			order,
-		});
-		io.emit('orderRunnerAssignedStore', {
-			message: 'A runner has been assigned to the order',
-			order,
-		});
-
-		res.status(200).json({
-			message: 'Runner successfully assigned to the order',
-			order,
-		});
-	} catch (error) {
-		console.error('Error adding runner to order:', error);
 		res.status(500).json({
-			message: 'Error assigning runner to the order',
+			message: 'Server error',
 			error: error.message,
 		});
 	}
 };
+
+// Removed the old addRunner, now using assignRunnerToOrder
+// export const addRunner = async (req, res) => { /* ... */ };
 
 // Update payment
 export const updatePayment = async (req, res) => {
@@ -935,16 +1065,33 @@ export const updatePayment = async (req, res) => {
 
 // Helper function to get bank code from bank name
 const getBankCode = async (bankName) => {
-	const banks = await axios.get(
-		'https://api.paystack.co/bank',
-	);
-	const bank = banks.data.data.find(
-		(bank) => bank.name === bankName,
-	);
-	return bank ? bank.code : null;
+	// This function typically needs to fetch from an external API (like Paystack's list banks API)
+	// For a real application, you might want to cache this list or use a more robust lookup.
+	try {
+		const banksResponse = await axios.get(
+			'https://api.paystack.co/bank',
+			{
+				headers: {
+					Authorization: `Bearer ${process.env.PAYSTACK_SECRET}`, // Your Paystack secret key
+				},
+			},
+		);
+		const banks = banksResponse.data.data;
+		const bank = banks.find(
+			(bank) =>
+				bank.name.toLowerCase() === bankName.toLowerCase(),
+		);
+		return bank ? bank.code : null;
+	} catch (error) {
+		console.error(
+			'Error fetching bank codes from Paystack:',
+			error.response?.data || error.message,
+		);
+		return null;
+	}
 };
 
-// Add a payment
+// Add a payment (this seems to be for manual payment confirmation, or for the platform crediting the vendor)
 export const addPayment = async (req, res) => {
 	try {
 		const { storeId, orderId, amount, method } = req.body;
@@ -1006,7 +1153,7 @@ export const addPayment = async (req, res) => {
 		const vendorReceivable = Math.min(
 			vendorEarnings,
 			order.amountPaid,
-		);
+		); // Vendor receives up to what's paid for the items and delivery
 
 		// Update vendor's wallet
 		let wallet = await Wallet.findOne({ storeId });
@@ -1026,7 +1173,7 @@ export const addPayment = async (req, res) => {
 			amount: vendorReceivable,
 			type: 'credit',
 			reference: `PAYMENT_${orderId}`,
-			description: `Payment received for order ${orderId}`,
+			description: `Payment received for order ${order.orderNumber}`, // Use orderNumber for clarity
 			date: new Date(),
 		});
 
@@ -1035,7 +1182,7 @@ export const addPayment = async (req, res) => {
 		await wallet.save();
 
 		const userPushToken = store?.expoPushToken; // Replace with the actual push token
-		const notificationMessage = `You have a new payment of ₦${vendorReceivable} added to your wallet. `;
+		const notificationMessage = `You have a new payment of ₦${vendorReceivable.toLocaleString()} added to your wallet. `;
 		const title = 'New Payment';
 
 		sendPushNotification(
@@ -1051,11 +1198,13 @@ export const addPayment = async (req, res) => {
 			walletBalance: wallet.balance,
 		});
 	} catch (error) {
+		console.error('Error in addPayment:', error);
 		res.status(500).json({ message: error.message });
 	}
 };
 
-// Get payment history
+// Get payment history (for a specific order, or for a vendor's wallet transactions?)
+// This currently fetches order-specific payments. If it's for wallet history, it would be wallet.transactions
 export const getPaymentHistory = async (req, res) => {
 	try {
 		const { orderId } = req.params;
@@ -1116,7 +1265,7 @@ export const processTransfer = async (req, res) => {
 		}
 
 		// Paystack transfer fee logic (Vendor bears this fee)
-		const transferFee = amount <= 5000 ? 10 : 25;
+		const transferFee = amount <= 5000 ? 10 : 25; // Example fee
 		const totalDeduction =
 			Number(amount) + Number(transferFee); // Total amount to deduct from wallet
 
@@ -1131,6 +1280,8 @@ export const processTransfer = async (req, res) => {
 		const paystackUrl = 'https://api.paystack.co/transfer';
 
 		// Step 1: Create a transfer recipient (if not already created)
+		// In a real app, you'd check if a recipient already exists for this bank account
+		// and reuse it to avoid creating duplicates.
 		const recipientResponse = await axios.post(
 			'https://api.paystack.co/transferrecipient',
 			{
@@ -1152,8 +1303,16 @@ export const processTransfer = async (req, res) => {
 			recipientResponse.data?.data?.recipient_code;
 
 		if (!recipientCode) {
+			console.error(
+				'Paystack recipient creation failed:',
+				recipientResponse.data,
+			);
 			return res.status(400).json({
-				message: 'Failed to create transfer recipient',
+				message:
+					'Failed to create transfer recipient with Paystack.',
+				details:
+					recipientResponse.data?.message ||
+					'Unknown Paystack error.',
 			});
 		}
 
@@ -1164,7 +1323,7 @@ export const processTransfer = async (req, res) => {
 				source: 'balance',
 				amount: amount * 100, // Convert to kobo
 				recipient: recipientCode,
-				reason: 'Vendor payout',
+				reason: `Vendor payout for ${store.name}`,
 			},
 			{
 				headers: {
@@ -1173,6 +1332,20 @@ export const processTransfer = async (req, res) => {
 				},
 			},
 		);
+
+		if (!transferResponse.data.status) {
+			console.error(
+				'Paystack transfer initiation failed:',
+				transferResponse.data,
+			);
+			return res.status(400).json({
+				message:
+					'Failed to initiate transfer with Paystack.',
+				details:
+					transferResponse.data?.message ||
+					'Unknown Paystack error.',
+			});
+		}
 
 		// Deduct the total amount (transfer + fee) from wallet
 		wallet.balance -= totalDeduction;
@@ -1201,9 +1374,9 @@ export const processTransfer = async (req, res) => {
 
 		await transferData.save();
 
-		const userPushToken = store?.expoPushToken; // Replace with the actual push token
-		const notificationMessage = `You have made a transfer of ₦${amount} to ${accountName}. `;
-		const title = 'Successful Transfer';
+		const userPushToken = store?.expoPushToken;
+		const notificationMessage = `You have made a transfer of ₦${amount.toLocaleString()} to ${accountName}. Your new wallet balance is ₦${wallet.balance.toLocaleString()}.`;
+		const title = 'Successful Transfer Initiated';
 
 		sendPushNotification(
 			userPushToken,
@@ -1218,9 +1391,13 @@ export const processTransfer = async (req, res) => {
 			newWalletBalance: wallet.balance,
 		});
 	} catch (error) {
+		console.error(
+			'Error processing transfer:',
+			error.response?.data || error.message,
+		);
 		res.status(500).json({
 			message: 'Error processing transfer',
-			error: error.message,
+			error: error.response?.data?.message || error.message,
 		});
 	}
 };
