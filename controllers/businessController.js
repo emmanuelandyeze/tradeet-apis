@@ -84,7 +84,7 @@ export const findBusinessAndProductsById = async (
 
 export const findBusinessByStoreLink = async (req, res) => {
 	const { storeLink } = req.params;
-	console.log(storeLink);
+	// console.log(storeLink);
 
 	try {
 		// Find the business by the provided businessId
