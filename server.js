@@ -20,6 +20,7 @@ import { Server } from 'socket.io';
 import googleRoutes from './routes/googlePlacesRoutes.js';
 import webhookRoutes from './routes/webhookRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
+import groupRoutes from './routes/groupRoutes.js';
 
 dotenv.config();
 
@@ -78,6 +79,7 @@ app.use('/expenses', expenseRoutes);
 app.use('/google', googleRoutes);
 app.use('/webhooks', webhookRoutes);
 app.use('/customers', customerRoutes);
+app.use('/groups', groupRoutes);
 
 // Add a response logger middleware
 app.use((req, res, next) => {

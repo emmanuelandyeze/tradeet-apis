@@ -142,7 +142,7 @@ router.post('/send-code', sendVerificationCode);
 router.post('/verify-code', verifyCode);
 
 // Complete profile setup
-router.post('/complete-profile', completeProfile);
+router.post('/complete-profile', completeProfile); 
 router.post(
 	'/complete-campus-profile',
 	completeCampusProfile,

@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import BusinessModel from '../models/BusinessModel.js';
 import axios from 'axios';
 import sendWhatsAppMessage from '../services/whatsappService.js';
+import { sendWelcomeMessage } from '../services/whatsappServices.js';
 
 const sendCode = async (whatsapp, verificationCode) => {
 	try {
@@ -293,6 +294,8 @@ export const completeProfile = async (req, res) => {
 			{ expiresIn: '30d' },
 		);
 
+		await sendWelcomeMessage(business);
+
 		res.status(200).json({
 			token,
 			message: 'Profile setup completed',
@@ -352,9 +355,10 @@ export const login = async (req, res) => {
 	try {
 		const business = await BusinessModel.findOne({ phone });
 		if (!business) {
-			return res
-				.status(400)
-				.json({ message: 'Business not found' });
+			return res.status(400).json({
+				message:
+					'Business not found. Please check phone number.',
+			});
 		}
 
 		// Check password
@@ -365,7 +369,7 @@ export const login = async (req, res) => {
 		if (!isMatch) {
 			return res
 				.status(400)
-				.json({ message: 'Invalid credentials' });
+				.json({ message: 'Password is incorrect.' });
 		}
 
 		// Generate token

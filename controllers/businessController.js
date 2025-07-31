@@ -410,6 +410,12 @@ export const updateBusinessInfo = async (req, res) => {
 		latitude,
 		longitude, // New fields for location coordinates
 		storeBanner,
+		currency,
+		priceFormat,
+		reviewsEnabled,
+		joinedCommunity,
+		sharedOnce,
+		category,
 	} = req.body;
 
 	try {
@@ -441,6 +447,17 @@ export const updateBusinessInfo = async (req, res) => {
 		if (email) business.email = email;
 		if (isVendor !== undefined)
 			business.isVendor = isVendor;
+		if (currency) business.currency = currency;
+		if (priceFormat) business.priceFormat = priceFormat;
+		if (reviewsEnabled !== undefined)
+			business.reviewsEnabled = reviewsEnabled;
+		if (joinedCommunity !== undefined)
+			business.joinedCommunity = joinedCommunity;
+		if (sharedOnce !== undefined)
+			business.sharedOnce = sharedOnce;
+		if (category) business.category = category;
+
+
 
 		// If plan is provided, update subscription details
 		if (plan) {

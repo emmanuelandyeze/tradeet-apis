@@ -107,6 +107,12 @@ const businessSchema = new mongoose.Schema({
 	},
 	resetOtp: { type: String },
 	resetOtpExpires: { type: Date },
+	reviewsEnabled: { type: Boolean, default: false },
+	currency: { type: String, default: 'NGN' },
+	priceFormat: { type: String, default: 'comma' },
+	joinedCommunity: { type: Boolean, default: false },
+	sharedOnce: { type: Boolean, default: false },
+	category: { type: String },
 });
 
 businessSchema.index({ location: '2dsphere' }); // Add geospatial index
