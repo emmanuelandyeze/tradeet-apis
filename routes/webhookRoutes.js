@@ -794,26 +794,20 @@ async function handleSendVendorDetails(to) {
 					},
 					components: [
 						{
-							type: 'body',
-							parameters: [
-								{
-									type: 'text',
-									text: message, // Use the passed message
-								},
-							],
-						},
-						{
 							type: 'button',
 							sub_type: 'flow',
-							index: 0,
-							parameters: {
-								action: {
-									flow_id: '1510687943251440', // Add your Flow ID from environment variable
-									mode: 'published', // Use 'published' for production
-									flow_action_data: {}, // Optional: Add any initial data for the flow
-									flow_token: 'test', // Required: Unique token for the flow
+							index: '0',
+							parameters: [
+								{
+									type: 'action',
+									action: {
+										flow_token: 'test',
+										flow_action_data: {
+											// '<CUSTOM_KEY>': '<CUSTOM_VALUE>',
+										},
+									},
 								},
-							},
+							],
 						},
 					],
 				},
