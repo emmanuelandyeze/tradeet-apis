@@ -21,9 +21,6 @@ import googleRoutes from './routes/googlePlacesRoutes.js';
 import webhookRoutes from './routes/webhookRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
 import groupRoutes from './routes/groupRoutes.js';
-import { decryptRequest } from '../api/encryption.js';
-import { getNextScreen } from '../api/flow.js';
-import crypto from 'crypto';
 
 dotenv.config();
 
@@ -45,12 +42,6 @@ app.use(
 	}),
 );
 
-const {
-	// APP_SECRET,
-	PRIVATE_KEY,
-	PASSPHRASE = '',
-} = process.env;
-
 const APP_SECRET = null;
 
 // Middleware
@@ -70,44 +61,6 @@ app.use((req, res, next) => {
 	}
 	next();
 });
-
-app.use(
-	express.json({
-		// store the raw request body to use it for signature verification
-		verify: (req, res, buf, encoding) => {
-			req.rawBody = buf?.toString(encoding || 'utf8');
-		},
-	}),
-);
-
-function isRequestSignatureValid(req) {
-	if (!APP_SECRET) {
-		console.warn(
-			'App Secret is not set up. Please Add your app secret in /.env file to check for request validation',
-		);
-		return true;
-	}
-
-	const signatureHeader = req.get('x-hub-signature-256');
-	const signatureBuffer = Buffer.from(
-		signatureHeader.replace('sha256=', ''),
-		'utf-8',
-	);
-
-	const hmac = crypto.createHmac('sha256', APP_SECRET);
-	const digestString = hmac
-		.update(req.rawBody)
-		.digest('hex');
-	const digestBuffer = Buffer.from(digestString, 'utf-8');
-
-	if (
-		!crypto.timingSafeEqual(digestBuffer, signatureBuffer)
-	) {
-		console.error('Error: Request Signature did not match');
-		return false;
-	}
-	return true;
-}
 
 // Routes
 app.use('/', indexRoutes);
