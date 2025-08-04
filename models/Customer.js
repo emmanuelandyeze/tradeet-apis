@@ -69,6 +69,10 @@ const CustomerSchema = new mongoose.Schema(
 			enum: ['active', 'inactive', 'prospect'],
 			default: 'prospect',
 		},
+		location: {
+			coordinates: [],
+			address: { type: String },
+		},
 	},
 	{
 		timestamps: true,

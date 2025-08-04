@@ -1,6 +1,9 @@
 import express from 'express';
 import axios from 'axios';
 import Customer from '../models/Customer.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const router = express.Router();
 
@@ -9,17 +12,18 @@ const PHONE_NUMBER_ID = '432799279914651';
 const GOOGLE_MAPS_API_KEY =
 	'AIzaSyDB9u0LKWhMKSBImf97RJjD8KzNq8rfPMY';
 
-// const api_url =
-	// 'https://95d9844089dffd6286ee72e7dc1e0e13.serveo.net';
+// const api_url = ' https://2aea6017dfeb.ngrok-free.app';
 const api_url = 'https://tradeet-api.onrender.com';
 
 async function reverseGeocode(lat, lng) {
+	console.log(lat, lng);
 	try {
 		const response = await axios.get(
-			`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${process.env.GOOGLE_MAPS_API_KEY}`,
+			`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`,
 		);
 
 		const results = response.data.results;
+		console.log(results);
 		if (results && results.length > 0) {
 			return results[0].formatted_address;
 		} else {
@@ -97,6 +101,8 @@ router.post('/', async (req, res) => {
 		'yo',
 	];
 
+	const store = ['fastmeal'];
+
 	// ✅ Normalize and strip punctuation
 	const cleanMessage = messageText?.replace(
 		/[^\w\s]/gi,
@@ -120,6 +126,11 @@ router.post('/', async (req, res) => {
 			await showTypingIndicator(id);
 			await sendConfirmOrChangeLocation(from, customer);
 		}
+	}
+
+	if (store.includes(cleanMessage)) {
+		await showTypingIndicator(id);
+		await handleSendVendorDetails(from);
 	}
 
 	if (message?.interactive?.type === 'button_reply') {
@@ -760,6 +771,77 @@ async function handleMakeSelection(from, vendorId, prodId) {
 			'Error sending carousel:',
 			error.response?.data || error.message,
 		);
+	}
+}
+
+async function handleSendVendorDetails(to) {
+	const accessToken = process.env.FB_SECRET;
+	const url =
+		'https://graph.facebook.com/v22.0/432799279914651/messages';
+	const message =
+		'Hello everyone this is Emmanuel testing the Tradeet Whatsapp Store.';
+	try {
+		const response = await axios.post(
+			url,
+			{
+				messaging_product: 'whatsapp',
+				to: to, // Use the 'to' parameter
+				type: 'template',
+				template: {
+					name: 'vendor_details',
+					language: {
+						code: 'en',
+					},
+					components: [
+						{
+							type: 'body',
+							parameters: [
+								{
+									type: 'text',
+									text: message, // Use the passed message
+								},
+							],
+						},
+						{
+							type: 'button',
+							sub_type: 'flow',
+							index: 0,
+							parameters: {
+								action: {
+									flow_id: '1510687943251440', // Add your Flow ID from environment variable
+									mode: 'published', // Use 'published' for production
+									flow_action_data: {}, // Optional: Add any initial data for the flow
+									flow_token: 'test', // Required: Unique token for the flow
+								},
+							},
+						},
+					],
+				},
+			},
+			{
+				headers: {
+					Authorization: `Bearer ${accessToken}`,
+					'Content-Type': 'application/json',
+				},
+			},
+		);
+
+		// Log successful response
+		console.log('Response:', response.data);
+		if (response.data.messages && response.data.contacts) {
+			console.log(
+				'Message ID:',
+				response.data.messages[0].id,
+			);
+			console.log(
+				'Recipient WA ID:',
+				response.data.contacts[0].wa_id,
+			);
+		}
+
+		return response.data;
+	} catch (error) {
+		console.error(error);
 	}
 }
 
